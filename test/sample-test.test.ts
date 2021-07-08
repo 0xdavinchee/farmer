@@ -1,22 +1,32 @@
 import { expect } from "./chai-setup";
-import { Greeter } from "../typechain";
+import { SushiFarmer } from "../typechain";
 import { ethers, deployments } from "hardhat";
 
 const setup = async () => {
-  await deployments.fixture(["Greeter"]);
+  await deployments.fixture(["SushiFarmer"]);
   const contracts = {
-    Greeter: (await ethers.getContract("Greeter")) as unknown as Greeter,
+    SushiFarmer: (await ethers.getContract(
+      "SushiFarmer"
+    )) as unknown as SushiFarmer,
   };
 
   return { ...contracts };
 };
 
-describe("Greeter", function () {
-  it("Should return the new greeting once it's changed", async function () {
-    const { Greeter } = await setup();
-    expect(await Greeter.greet()).to.equal("Hello Hardhat!");
+describe("SushiFarmer Tests", function () {
+  it("Should not allow non-owner to carry out any actions.", async function () {});
 
-    await Greeter.setGreeting("Hola, mundo!");
-    expect(await Greeter.greet()).to.equal("Hola, mundo!");
-  });
+  it("Should get an expected amount of LP tokens.", async function () {});
+
+  it("Should be able to add LP position to contract.", async function () {});
+
+  it("Should be able to remove LP position from contract.", async function () {});
+
+  it("Should be able to claim rewards.", async function () {});
+
+  it("Should be able to swap rewards for LP assets.", async function () {});
+
+  it("Should be able to swap LP tokens for underlying assets.", async function () {});
+
+  it("Should be able to swap specified amount of assets for one specified output asset.", async function () {});
 });
