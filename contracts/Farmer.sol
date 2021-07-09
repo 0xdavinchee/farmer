@@ -3,11 +3,15 @@ pragma solidity ^0.6.12;
 
 import {IUniswapV2Router02} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 
 /// @title Farmer is an abstract contract representing a few possible actions one would carry
 /// out while tending the crops.
 /// @author 0xdavinchee
 abstract contract Farmer is Ownable {
+    using SafeMath for uint256;
+
+    uint256 constant public ONE_HUNDRED_PERCENT = 1000;
     IUniswapV2Router02 public router;
 
     constructor(IUniswapV2Router02 _router) public {
@@ -23,8 +27,7 @@ abstract contract Farmer is Ownable {
         address _tokenB,
         uint256 _amountADesired,
         uint256 _amountBDesired,
-        address _to,
-        uint256 _deadline
+        uint256 _slippage,
     ) public virtual;
 
     /** @dev Allows this contract to interact with a pair contract
@@ -36,8 +39,7 @@ abstract contract Farmer is Ownable {
         address _token,
         uint256 _amountTokenDesired,
         uint256 _amountWETHMin,
-        address _to,
-        uint256 _deadline
+        uint256 _slippage,
     ) public virtual;
 
     /** @dev Removes an LP position which this contract in exchange
@@ -48,8 +50,6 @@ abstract contract Farmer is Ownable {
         address _tokenB,
         uint256 _amountAMin,
         uint256 _amountBMin,
-        address _to,
-        uint256 _deadline
     ) external virtual;
 
     /** @dev Removes an LP position which this contract in exchange
@@ -60,8 +60,6 @@ abstract contract Farmer is Ownable {
         address _token,
         uint256 _amountTokenMin,
         uint256 _amountWETHMin,
-        address _to,
-        uint256 _deadline
     ) external virtual;
 
     /** @dev Allows this contract to claim any rewards granted from
@@ -97,4 +95,12 @@ abstract contract Farmer is Ownable {
 
     /** @dev Allows the owner of the contract to withdraw funds. */
     function withdrawFunds(address _asset, uint256 _amount) external virtual;
+
+    /** @dev A Helper function for getting the minimum amount of tokens
+     * to receive given a desired amount and slippage as expressed in 
+     * percentage.
+     */
+    function _getMinAmount(uint256 _amountDesired, uint256 _slippage) internal returns(uint256) {
+        return _amountDesired.mul(_slippage).div(ONE_HUNDRED_PERCENT);
+    }
 }

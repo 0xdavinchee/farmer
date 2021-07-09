@@ -9,19 +9,24 @@ import {Farmer} from "./Farmer.sol";
 contract SushiFarmer is
     Farmer(IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506))
 {
+
     function getLPTokens(
         address _tokenA,
         address _tokenB,
         uint256 _amountADesired,
         uint256 _amountBDesired,
-        address _to,
-        uint256 _deadline
-    ) public override {}
+        uint256 _slippage,
+    ) public override {
+        uint256 amountAMin = _getMinAmount(_amountADesired, _slippage);
+        uint256 amountBMin = _getMinAmount(_amountBDesired, _slippage);
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router.addLiquidity(_tokenA, _tokenB, _amountADesired, _amountBDesired, amountAMin, amountBMin, address(this), block.timestamp);
+    }
 
     function getLPTokensWETH(
         address _token,
         uint256 _amountTokenDesired,
         uint256 _amountETHMin,
+        uint256 _slippage,
         address _to,
         uint256 _deadline
     ) public override {}
