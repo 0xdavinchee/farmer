@@ -1,22 +1,30 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IUniswapV2Router02} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import {IUniswapV2Pair} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Pair.sol";
 import {UniswapV2Library} from "@sushiswap/core/contracts/uniswapv2/libraries/UniswapV2Library.sol";
+import {IMiniChefV2} from "./interfaces/IMiniChefV2.sol";
 import {Farmer} from "./Farmer.sol";
 
 contract SushiFarmer is
     Farmer(IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506))
 {
+    IMiniChefV2 public chef;
+
+    constructor(address _chef) public {
+        chef = IMiniChefV2(_chef);
+    }
+
     function getLPTokens(
         address _tokenA,
         address _tokenB,
         uint256 _amountADesired,
         uint256 _amountBDesired,
         uint256 _slippage
-    ) public override onlyOwner {
+    ) public override onlyOwner returns (uint256) {
         uint256 amountAMin = _getMinAmount(_amountADesired, _slippage);
         uint256 amountBMin = _getMinAmount(_amountBDesired, _slippage);
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
@@ -30,6 +38,7 @@ contract SushiFarmer is
             address(this),
             block.timestamp
         );
+        return liquidity;
     }
 
     function getLPTokensETH(
@@ -37,7 +46,7 @@ contract SushiFarmer is
         uint256 _amountTokensDesired,
         uint256 _amountETHMin,
         uint256 _slippage
-    ) public payable override onlyOwner {
+    ) public payable override onlyOwner returns (uint256) {
         uint256 amountTokenMin = _getMinAmount(_amountTokensDesired, _slippage);
         (uint256 amountToken, uint256 amountWETH, uint256 liquidity) = router
         .addLiquidityETH(
@@ -84,7 +93,25 @@ contract SushiFarmer is
         );
     }
 
-    function claimRewards(uint256 _amount) external override onlyOwner {}
+    function depositLP(uint256 _pid, uint256 _amount)
+        public
+        override
+        onlyOwner
+    {
+        chef.deposit(_pid, _amount, address(this));
+    }
+
+    function withdrawLP(uint256 _pid, uint256 _amount)
+        public
+        override
+        onlyOwner
+    {
+        chef.withdraw(_pid, _amount, address(this));
+    }
+
+    function claimRewards(uint256 _pid) public override onlyOwner {
+        chef.harvest(_pid, address(this));
+    }
 
     function lpBalance(address _pair)
         external
@@ -94,20 +121,120 @@ contract SushiFarmer is
         return IUniswapV2Pair(_pair).balanceOf(address(this));
     }
 
-    function swapRewardsForLPAssets(
-        address _rewardToken,
-        address _tokenA,
-        address _tokenB,
-        address[] calldata _tokenAPath,
-        address[] calldata _tokenBPath
-    ) external override onlyOwner {
-    }
-
-    function swapLPTokensForAssets(uint256 _amount)
+    function swapRewardsForLPAssets(RewardsForLPData calldata data)
         external
         override
         onlyOwner
-    {}
+    {
+        // approve reward token spend by the router for this txn
+        IERC20(data.rewardToken).approve(
+            address(router),
+            IERC20(data.rewardToken).balanceOf(address(this))
+        );
+
+        uint256 splitRewardsBalance = IERC20(data.rewardToken)
+        .balanceOf(address(this))
+        .div(2);
+        (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(
+            router.factory(),
+            data.tokenA,
+            data.tokenB
+        );
+        {
+            // we maybe should calculate this outside
+            uint256[] memory amountsOutA = router.getAmountsOut(
+                splitRewardsBalance,
+                data.tokenAPath
+            );
+
+            // swap reward tokens for token A
+            uint256[] memory amountsA = router.swapExactTokensForTokens(
+                splitRewardsBalance,
+                amountsOutA[amountsOutA.length - 1],
+                data.tokenAPath,
+                address(this),
+                block.timestamp
+            );
+
+            // Method A: based on the amount of token A we were able to get from 50% of rewards
+            // we find out the optimal amount of B to retrieve, then we check if our split rewards
+            // is greater than amountB, if it is, we swap the tokens accordingly.
+            // if we are unable to we revert the whole txn
+
+            // this is the optimal amount of tokenB in exchange for LP tokens.
+            uint256 amountBOptimal = router.quote(
+                amountsA[amountsA.length - 1],
+                reserveA,
+                reserveB
+            );
+
+            // we maybe should calculate this outside
+            uint256[] memory amountsInB = router.getAmountsIn(
+                amountBOptimal,
+                data.tokenBPath
+            );
+
+            require(
+                splitRewardsBalance >= amountsInB[0],
+                "SushiFarmer: You don't have enough rewards for the reserves."
+            );
+
+            // swap reward tokens for token B to get optimal amount
+            router.swapTokensForExactTokens(
+                amountBOptimal,
+                splitRewardsBalance,
+                data.tokenBPath,
+                address(this),
+                block.timestamp
+            );
+
+            // get lp tokens based on swap executed and optimal b amount
+            uint256 liquidityA = getLPTokens(
+                data.tokenA,
+                data.tokenB,
+                amountsA[amountsA.length - 1],
+                amountBOptimal,
+                data.slippage
+            );
+
+            depositLP(data.pid, liquidityA);
+        }
+        {
+            // Method B: instead of using amountBOptimal, we simply just trade all
+            // 50% of the rewards for token B first, then do a quote on both sides
+            // to see which is more likely.
+            uint256[] memory amountsOutB = router.getAmountsOut(
+                splitRewardsBalance,
+                data.tokenBPath
+            );
+
+            // swap reward tokens for token B
+            uint256[] memory amountsB = router.swapExactTokensForTokens(
+                splitRewardsBalance,
+                amountsOutB[amountsOutB.length - 1],
+                data.tokenBPath,
+                address(this),
+                block.timestamp
+            );
+
+            // this is the optimal amount of tokenA in exchange for LP tokens.
+            uint256 amountAOptimal = router.quote(
+                amountsB[amountsB.length - 1],
+                reserveB,
+                reserveA
+            );
+
+            uint256 liquidityB = getLPTokens(
+                data.tokenA,
+                data.tokenB,
+                amountAOptimal,
+                amountsB[amountsB.length - 1],
+                data.slippage
+            );
+
+            depositLP(data.pid, liquidityB);
+        }
+    }
 
     function swapAssetsForAsset(
         address[] calldata _inputAssets,
@@ -119,5 +246,13 @@ contract SushiFarmer is
         external
         override
         onlyOwner
-    {}
+    {
+        bool success = IERC20(_asset).transfer(msg.sender, _amount);
+        require(success, "SushiFarmer: Withdrawal failed.");
+    }
+
+    function withdrawETH() external payable override onlyOwner {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        require(success, "SushiFarmer: ETH Withdrawal failed.");
+    }
 }

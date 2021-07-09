@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 import {IUniswapV2Router02} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -10,6 +11,16 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 /// @author 0xdavinchee
 abstract contract Farmer is Ownable {
     using SafeMath for uint256;
+
+    struct RewardsForLPData {
+        uint256 pid;
+        uint256 slippage;
+        address rewardToken;
+        address tokenA;
+        address tokenB;
+        address[] tokenAPath; // first addr: _rewardToken, last addr: _tokenA
+        address[] tokenBPath; // first addr: _rewardToken, last addr: _tokenB
+    }
 
     uint256 public constant ONE_HUNDRED_PERCENT = 1000;
     IUniswapV2Router02 public router;
@@ -28,7 +39,7 @@ abstract contract Farmer is Ownable {
         uint256 _amountADesired,
         uint256 _amountBDesired,
         uint256 _slippage
-    ) public virtual;
+    ) public virtual returns (uint256);
 
     /** @dev Allows this contract to interact with a pair contract
      * and add liquidity to a pair by converting the necessary
@@ -40,7 +51,7 @@ abstract contract Farmer is Ownable {
         uint256 _amountTokensDesired,
         uint256 _amountETHMin,
         uint256 _slippage
-    ) public payable virtual;
+    ) public payable virtual returns (uint256);
 
     /** @dev Swaps LP tokens owned by this contract in exchange
      * for the underlying tokens.
@@ -64,10 +75,19 @@ abstract contract Farmer is Ownable {
         uint256 _amountETHMin
     ) external virtual;
 
+    /** @dev Deposits LP tokens into a farm for rewards, i.e. Onsen on
+     * Sushi.
+     */
+    function depositLP(uint256 _pid, uint256 _amount) public virtual;
+
+    /** @dev Withdraws LP tokens from a farm.
+     */
+    function withdrawLP(uint256 _pid, uint256 _amount) public virtual;
+
     /** @dev Allows this contract to claim any rewards granted from
      * providing liquidity.
      */
-    function claimRewards(uint256 _amount) external virtual;
+    function claimRewards(uint256 _amount) public virtual;
 
     /** @dev Gets the LP token balance of the pair you are providing
      *liquidity for.
@@ -80,16 +100,9 @@ abstract contract Farmer is Ownable {
     /** @dev Swaps the claimed rewards for equal amounts of the LP assets
      * you need from an LP contract.
      */
-    function swapRewardsForLPAssets(
-        address _rewardToken,
-        address _tokenA,
-        address _tokenB,
-        address[] calldata _tokenAPath,
-        address[] calldata _tokenBPath
-    ) external virtual;
-
-    /** @dev Swaps _amount of LP Tokens for the underlying assets. */
-    function swapLPTokensForAssets(uint256 _amount) external virtual;
+    function swapRewardsForLPAssets(RewardsForLPData calldata data)
+        external
+        virtual;
 
     /** @dev Takes in an array of asset addresses, an array of amounts of
      * these assets and an output asset address, allows the user to swap
@@ -101,8 +114,11 @@ abstract contract Farmer is Ownable {
         address _outputAsset
     ) external virtual;
 
-    /** @dev Allows the owner of the contract to withdraw funds. */
+    /** @dev Allows the owner of the contract to withdraw ERC20s. */
     function withdrawFunds(address _asset, uint256 _amount) external virtual;
+
+    /** @dev Allows the owner of the contract to withdraw ETH. */
+    function withdrawETH() external payable virtual;
 
     /** @dev A Helper function for getting the minimum amount of tokens
      * to receive given a desired amount and slippage as expressed in
