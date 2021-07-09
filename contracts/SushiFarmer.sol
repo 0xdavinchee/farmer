@@ -7,7 +7,7 @@ import {UniswapV2Library} from "@sushiswap/core/contracts/uniswapv2/libraries/Un
 import {Farmer} from "./Farmer.sol";
 
 contract SushiFarmer is
-    Farmer(IUniswapV2Router02(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F))
+    Farmer(IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506))
 {
     function getLPTokens(
         address _tokenA,
