@@ -22,7 +22,7 @@ contract SushiFarmer is
      * long as the contract holds enough tokens given the desired amounts
      * and slippage allowance.
      */
-    function createNewLPAndDeposit(bytes calldata _data) external {
+    function createNewLPAndDeposit(bytes calldata _data) external onlyOwner {
         CreateLPData memory data = abi.decode(_data, (CreateLPData));
         (address pair, uint256 liquidity) = getLPTokens(
             data.tokenA,
@@ -40,7 +40,10 @@ contract SushiFarmer is
      * swapping these assets for the LP token and then depositing into
      * the LP.
      */
-    function autoCompoundExistingLPPosition(bytes calldata _data) external {
+    function autoCompoundExistingLPPosition(bytes calldata _data)
+        external
+        onlyOwner
+    {
         RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
         claimRewards(data.pid);
         (address pair, uint256 liquidity) = swapRewardsForLPAssets(_data);
