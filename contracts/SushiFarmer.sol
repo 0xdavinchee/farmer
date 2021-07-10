@@ -14,8 +14,37 @@ contract SushiFarmer is
 {
     IMiniChefV2 public chef;
 
-    constructor(address _chef) public {
-        chef = IMiniChefV2(_chef);
+    constructor(IMiniChefV2 _chef) public {
+        chef = _chef;
+    }
+
+    /** @dev This function allows the user to create a new LP position as
+     * long as the contract holds enough tokens given the desired amounts
+     * and slippage allowance.
+     */
+    function createNewLPAndDeposit(bytes calldata _data) external {
+        CreateLPData memory data = abi.decode(_data, (CreateLPData));
+        uint256 liquidity = getLPTokens(
+            data.tokenA,
+            data.tokenB,
+            data.amountADesired,
+            data.amountBDesired,
+            data.slippage
+        );
+        depositLP(data.pid, liquidity);
+    }
+
+    /** @dev This function allows the user to compound an existing LP
+     * position by harvesting any pending rewards with the MiniChef
+     * contract, swapping the rewards for the underlying LP assets,
+     * swapping these assets for the LP token and then depositing into
+     * the LP.
+     */
+    function autoCompoundExistingLPPosition(bytes calldata _data) external {
+        RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
+        claimRewards(data.pid);
+        uint256 liquidity = swapRewardsForLPAssets(_data);
+        depositLP(data.pid, liquidity);
     }
 
     function getLPTokens(
@@ -121,11 +150,13 @@ contract SushiFarmer is
         return IUniswapV2Pair(_pair).balanceOf(address(this));
     }
 
-    function swapRewardsForLPAssets(RewardsForLPData calldata data)
-        external
+    function swapRewardsForLPAssets(bytes calldata _data)
+        internal
         override
         onlyOwner
+        returns (uint256)
     {
+        RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
         // approve reward token spend by the router for this txn
         IERC20(data.rewardToken).approve(
             address(router),
@@ -196,8 +227,7 @@ contract SushiFarmer is
                 amountBOptimal,
                 data.slippage
             );
-
-            depositLP(data.pid, liquidityA);
+            return liquidityA;
         }
         {
             // Method B: instead of using amountBOptimal, we simply just trade all
@@ -231,8 +261,7 @@ contract SushiFarmer is
                 amountsB[amountsB.length - 1],
                 data.slippage
             );
-
-            depositLP(data.pid, liquidityB);
+            return liquidityB;
         }
     }
 

@@ -6,12 +6,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployer } = await getNamedAccounts();
   const { deploy } = deployments;
 
-  await deploy("Greeter", {
+  await deploy("SushiFarmer", {
     from: deployer,
-    args: ["Hello Hardhat!"],
+    args: [process.env.MINI_CHEF_V2_ADDRESS],
     log: true
   });
 }
 
 export default func;
-func.tags = ["Greeter"];
+func.tags = ["SushiFarmer"];

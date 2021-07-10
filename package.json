@@ -3,6 +3,7 @@
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@openzeppelin/contracts": "3.4.1",
     "@sushiswap/core": "^1.4.2",
+    "@sushiswap/sdk": "^5.0.0-canary.23",
     "@typechain/ethers-v5": "^7.0.1",
     "@typechain/hardhat": "^2.0.2",
     "@types/chai": "^4.2.18",

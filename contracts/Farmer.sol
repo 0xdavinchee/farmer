@@ -1,6 +1,5 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
-pragma experimental ABIEncoderV2;
 
 import {IUniswapV2Router02} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -11,6 +10,15 @@ import {SafeMath} from "@openzeppelin/contracts/math/SafeMath.sol";
 /// @author 0xdavinchee
 abstract contract Farmer is Ownable {
     using SafeMath for uint256;
+
+    struct CreateLPData {
+        uint256 pid;
+        uint256 slippage;
+        uint256 amountADesired;
+        uint256 amountBDesired;
+        address tokenA;
+        address tokenB;
+    }
 
     struct RewardsForLPData {
         uint256 pid;
@@ -95,14 +103,15 @@ abstract contract Farmer is Ownable {
     function lpBalance(address _pair)
         external
         virtual
-        returns (uint256 _balance);
+        returns (uint256 balance);
 
     /** @dev Swaps the claimed rewards for equal amounts of the LP assets
      * you need from an LP contract.
      */
-    function swapRewardsForLPAssets(RewardsForLPData calldata data)
-        external
-        virtual;
+    function swapRewardsForLPAssets(bytes calldata data)
+        internal
+        virtual
+        returns (uint256 liquidity);
 
     /** @dev Takes in an array of asset addresses, an array of amounts of
      * these assets and an output asset address, allows the user to swap

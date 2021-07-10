@@ -16,7 +16,7 @@ const setup = async () => {
 describe("SushiFarmer Tests", function () {
   it("Should not allow non-owner to carry out any actions.", async function () {});
 
-  it("Should get an expected amount of LP tokens.", async function () {});
+  it("Should get amount of LP tokens that is reasonable.", async function () {});
 
   it("Should be able to add LP position to contract.", async function () {});
 
