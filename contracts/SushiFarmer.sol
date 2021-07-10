@@ -24,14 +24,14 @@ contract SushiFarmer is
      */
     function createNewLPAndDeposit(bytes calldata _data) external {
         CreateLPData memory data = abi.decode(_data, (CreateLPData));
-        uint256 liquidity = getLPTokens(
+        (address pair, uint256 liquidity) = getLPTokens(
             data.tokenA,
             data.tokenB,
             data.amountADesired,
             data.amountBDesired,
             data.slippage
         );
-        depositLP(data.pid, liquidity);
+        depositLP(pair, data.pid, liquidity);
     }
 
     /** @dev This function allows the user to compound an existing LP
@@ -43,8 +43,8 @@ contract SushiFarmer is
     function autoCompoundExistingLPPosition(bytes calldata _data) external {
         RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
         claimRewards(data.pid);
-        uint256 liquidity = swapRewardsForLPAssets(_data);
-        depositLP(data.pid, liquidity);
+        (address pair, uint256 liquidity) = swapRewardsForLPAssets(_data);
+        depositLP(pair, data.pid, liquidity);
     }
 
     function getLPTokens(
@@ -53,9 +53,18 @@ contract SushiFarmer is
         uint256 _amountADesired,
         uint256 _amountBDesired,
         uint256 _slippage
-    ) public override onlyOwner returns (uint256) {
+    ) public override onlyOwner returns (address, uint256) {
+        address pair = UniswapV2Library.pairFor(
+            router.factory(),
+            _tokenA,
+            _tokenB
+        );
         uint256 amountAMin = _getMinAmount(_amountADesired, _slippage);
         uint256 amountBMin = _getMinAmount(_amountBDesired, _slippage);
+
+        IERC20(_tokenA).approve(pair, amountAMin);
+        IERC20(_tokenB).approve(pair, amountBMin);
+
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
         .addLiquidity(
             _tokenA,
@@ -67,7 +76,7 @@ contract SushiFarmer is
             address(this),
             block.timestamp
         );
-        return liquidity;
+        return (pair, liquidity);
     }
 
     function getLPTokensETH(
@@ -86,6 +95,7 @@ contract SushiFarmer is
             address(this),
             block.timestamp
         );
+        return liquidity;
     }
 
     function removeLP(
@@ -95,6 +105,12 @@ contract SushiFarmer is
         uint256 _amountAMin,
         uint256 _amountBMin
     ) external override onlyOwner {
+        address pair = UniswapV2Library.pairFor(
+            router.factory(),
+            _tokenA,
+            _tokenB
+        );
+        IERC20(pair).approve(pair, _liquidity);
         (uint256 amountA, uint256 amountB) = router.removeLiquidity(
             _tokenA,
             _tokenB,
@@ -122,11 +138,12 @@ contract SushiFarmer is
         );
     }
 
-    function depositLP(uint256 _pid, uint256 _amount)
-        public
-        override
-        onlyOwner
-    {
+    function depositLP(
+        address _lpToken,
+        uint256 _pid,
+        uint256 _amount
+    ) public override onlyOwner {
+        IERC20(_lpToken).approve(address(chef), _amount);
         chef.deposit(_pid, _amount, address(this));
     }
 
@@ -154,7 +171,7 @@ contract SushiFarmer is
         internal
         override
         onlyOwner
-        returns (uint256)
+        returns (address, uint256)
     {
         RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
         // approve reward token spend by the router for this txn
@@ -220,14 +237,14 @@ contract SushiFarmer is
             );
 
             // get lp tokens based on swap executed and optimal b amount
-            uint256 liquidityA = getLPTokens(
+            (address pairA, uint256 liquidityA) = getLPTokens(
                 data.tokenA,
                 data.tokenB,
                 amountsA[amountsA.length - 1],
                 amountBOptimal,
                 data.slippage
             );
-            return liquidityA;
+            return (pairA, liquidityA);
         }
         {
             // Method B: instead of using amountBOptimal, we simply just trade all
@@ -254,14 +271,14 @@ contract SushiFarmer is
                 reserveA
             );
 
-            uint256 liquidityB = getLPTokens(
+            (address pairB, uint256 liquidityB) = getLPTokens(
                 data.tokenA,
                 data.tokenB,
                 amountAOptimal,
                 amountsB[amountsB.length - 1],
                 data.slippage
             );
-            return liquidityB;
+            return (pairB, liquidityB);
         }
     }
 

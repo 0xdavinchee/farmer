@@ -47,7 +47,7 @@ abstract contract Farmer is Ownable {
         uint256 _amountADesired,
         uint256 _amountBDesired,
         uint256 _slippage
-    ) public virtual returns (uint256);
+    ) public virtual returns (address, uint256);
 
     /** @dev Allows this contract to interact with a pair contract
      * and add liquidity to a pair by converting the necessary
@@ -86,7 +86,11 @@ abstract contract Farmer is Ownable {
     /** @dev Deposits LP tokens into a farm for rewards, i.e. Onsen on
      * Sushi.
      */
-    function depositLP(uint256 _pid, uint256 _amount) public virtual;
+    function depositLP(
+        address _lpToken,
+        uint256 _pid,
+        uint256 _amount
+    ) public virtual;
 
     /** @dev Withdraws LP tokens from a farm.
      */
@@ -111,7 +115,7 @@ abstract contract Farmer is Ownable {
     function swapRewardsForLPAssets(bytes calldata data)
         internal
         virtual
-        returns (uint256 liquidity);
+        returns (address pair, uint256 liquidity);
 
     /** @dev Takes in an array of asset addresses, an array of amounts of
      * these assets and an output asset address, allows the user to swap
