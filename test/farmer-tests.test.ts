@@ -17,7 +17,7 @@ const setup = async () => {
   return { ...contracts };
 };
 
-const getTimeNow = () => Math.floor(new Date().getTime() / 1000) - 1;
+const getTimeNow = () => Math.floor(new Date().getTime() / 1000) - 10;
 
 describe("SushiFarmer Tests", function () {
   it("Should allow me to get my pools", async () => {
@@ -29,6 +29,9 @@ describe("SushiFarmer Tests", function () {
     });
     console.log("poolPairs: ", poolPairs);
 
+    // this doesn't work as it is looking in the masterchef contract
+    // not the minichef. we will need to use https://api.thegraph.com/subgraphs/name/sushiswap/matic-minichef
+    // to build our own queries with the entities here https://thegraph.com/legacy-explorer/subgraph/sushiswap/matic-minichef?query=Example%20query
     const userPairs = await sushi.masterchef.user({
       chainId: 137,
       timestamp: getTimeNow(),
