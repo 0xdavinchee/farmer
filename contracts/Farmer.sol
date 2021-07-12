@@ -112,7 +112,8 @@ abstract contract Farmer is Ownable {
     /** @dev Swaps the claimed rewards for equal amounts of the LP assets
      * you need from an LP contract.
      */
-    function swapRewardsForLPAssets(bytes calldata data)
+    function swapRewardsForLPAssets(RewardsForLPData
+     calldata data)
         internal
         virtual
         returns (address pair, uint256 liquidity);
@@ -126,6 +127,9 @@ abstract contract Farmer is Ownable {
         uint256[] calldata _amounts,
         address _outputAsset
     ) external virtual;
+
+    /** @dev Allows the owner of the contract to set a new owner. */
+    function setOwner(address _newOwner) external virtual;
 
     /** @dev Allows the owner of the contract to withdraw ERC20s. */
     function withdrawFunds(address _asset, uint256 _amount) external virtual;

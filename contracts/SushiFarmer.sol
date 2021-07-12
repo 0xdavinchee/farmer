@@ -24,8 +24,8 @@ contract SushiFarmer is
      * long as the contract holds enough tokens given the desired amounts
      * and slippage allowance.
      */
-    function createNewLPAndDeposit(bytes calldata _data) external onlyOwner {
-        CreateLPData memory data = abi.decode(_data, (CreateLPData));
+    function createNewLPAndDeposit(CreateLPData calldata _data) external onlyOwner {
+        CreateLPData calldata data = _data;
         (address pair, uint256 liquidity) = getLPTokens(
             data.tokenA,
             data.tokenB,
@@ -42,14 +42,13 @@ contract SushiFarmer is
      * swapping these assets for the LP token and then depositing into
      * the LP.
      */
-    function autoCompoundExistingLPPosition(bytes calldata _data)
+    function autoCompoundExistingLPPosition(RewardsForLPData calldata _data)
         external
         onlyOwner
     {
-        RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
-        claimRewards(data.pid);
+        claimRewards(_data.pid);
         (address pair, uint256 liquidity) = swapRewardsForLPAssets(_data);
-        depositLP(pair, data.pid, liquidity);
+        depositLP(pair, _data.pid, liquidity);
     }
 
     function getLPTokens(
@@ -172,13 +171,13 @@ contract SushiFarmer is
         return IUniswapV2Pair(_pair).balanceOf(address(this));
     }
 
-    function swapRewardsForLPAssets(bytes calldata _data)
+    function swapRewardsForLPAssets(RewardsForLPData calldata _data)
         internal
         override
         onlyOwner
         returns (address, uint256)
     {
-        RewardsForLPData memory data = abi.decode(_data, (RewardsForLPData));
+        RewardsForLPData calldata data = _data;
         // approve reward token spend by the router for this txn
         IERC20(data.rewardToken).approve(
             address(router),
@@ -285,6 +284,10 @@ contract SushiFarmer is
             );
             return (pairB, liquidityB);
         }
+    }
+
+    function setOwner(address _newOwner) external override onlyOwner {
+        transferOwnership(_newOwner);
     }
 
     function swapAssetsForAsset(
