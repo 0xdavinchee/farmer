@@ -21,6 +21,7 @@ const chainIds = {
 
 const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
 const TEST_ACCOUNT = process.env.TEST_ACCOUNT || "";
+const WHALE_TEST_ADDRESS = process.env.WHALE_TEST_ADDRESS || "";
 
 const createUrl = (network: keyof typeof chainIds) =>
   "https://" + network + ".infura.io/v3/" + INFURA_API_KEY;
@@ -66,7 +67,11 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
     deployer: 0,
+    whale: WHALE_TEST_ADDRESS
   },
+  mocha: {
+    timeout: 150000
+  }
 };
 
 export default config;

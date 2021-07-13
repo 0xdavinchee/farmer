@@ -158,6 +158,16 @@ contract SushiFarmer is
         );
         return liquidity;
     }
+    
+    /** @dev Really only to be used for testing. */
+    function getLPTokens(
+        address _token0,
+        address _token1,
+        uint256 _amountADesired,
+        uint256 _amountBDesired
+    ) external onlyOwner returns (address, uint256) {
+        return _getLPTokens(_token0, _token1, _amountADesired, _amountBDesired);
+    }
 
     function _getLPTokens(
         address _token0,
@@ -165,15 +175,14 @@ contract SushiFarmer is
         uint256 _amountADesired,
         uint256 _amountBDesired
     ) internal override returns (address, uint256) {
+        // TODO: pass in the pair addr to save on some gas
         address pair = UniswapV2Library.pairFor(
             router.factory(),
             _token0,
             _token1
         );
-
-        IERC20(_token0).approve(pair, _amountADesired);
-        IERC20(_token1).approve(pair, _amountBDesired);
-
+        IERC20(_token0).approve(address(router), _amountADesired);
+        IERC20(_token1).approve(address(router), _amountBDesired);
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
         .addLiquidity(
             _token0,

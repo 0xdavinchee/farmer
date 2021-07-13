@@ -49,4 +49,7 @@ interface IMiniChefV2 {
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of the LP tokens.
     function emergencyWithdraw(uint256 pid, address to) external;
+    
+    /// @notice Info of each user that stakes LP tokens.
+    function userInfo(uint256 _pid, address _user) view external returns (uint256, int256);
 }
