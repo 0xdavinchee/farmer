@@ -22,16 +22,11 @@ contract SushiFarmer is
      * long as the contract holds enough tokens given the desired amounts
      * and slippage allowance.
      */
-    function createNewLPAndDeposit(CreateLPData calldata _data) external onlyOwner {
-        CreateLPData calldata data = _data;
-        (address pair, uint256 liquidity) = getLPTokens(
-            data.tokenA,
-            data.tokenB,
-            data.amountADesired,
-            data.amountBDesired,
-            data.slippage
-        );
-        depositLP(pair, data.pid, liquidity);
+    function createNewLPAndDeposit(CreateLPData calldata _data)
+        external
+        onlyOwner
+    {
+        _createNewLPAndDeposit(_data);
     }
 
     /** @dev This function allows the user to compound an existing LP
@@ -40,82 +35,49 @@ contract SushiFarmer is
      * swapping these assets for the LP token and then depositing into
      * the LP.
      */
-    function autoCompoundExistingLPPosition(RewardsForLPData calldata _data)
-        external
-        onlyOwner
-    {
-        claimRewards(_data.pid);
-        (address pair, uint256 liquidity) = swapRewardsForLPAssets(_data);
-        depositLP(pair, _data.pid, liquidity);
+    function autoCompoundExistingLPPosition(
+        uint256 _pid,
+        RewardsForTokensPaths[] calldata _data
+    ) external onlyOwner {
+        _claimRewards(_pid);
+
+        // _data will always be length = 2.
+        for (uint256 i = 0; i < _data.length; i++) {
+            uint256[] memory amounts = _swapRewardsForLPAssets(_data[i]);
+        }
+
+        address token0 = _data[0].token0Path[_data[0].token0Path.length - 1];
+        address token1 = _data[0].token1Path[_data[0].token1Path.length - 1];
+
+        CreateLPData memory data;
+        data.pid = _pid;
+        data.token0 = token0;
+        data.token1 = token1;
+        data.amountADesired = IERC20(token0).balanceOf(address(this));
+        data.amountBDesired = IERC20(token1).balanceOf(address(this));
+        _createNewLPAndDeposit(data);
     }
 
-    function getLPTokens(
-        address _tokenA,
-        address _tokenB,
-        uint256 _amountADesired,
-        uint256 _amountBDesired,
-        uint256 _slippage
-    ) public override onlyOwner returns (address, uint256) {
-        address pair = UniswapV2Library.pairFor(
-            router.factory(),
-            _tokenA,
-            _tokenB
-        );
-        uint256 amountAMin = _getMinAmount(_amountADesired, _slippage);
-        uint256 amountBMin = _getMinAmount(_amountBDesired, _slippage);
-
-        IERC20(_tokenA).approve(pair, amountAMin);
-        IERC20(_tokenB).approve(pair, amountBMin);
-
-        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
-        .addLiquidity(
-            _tokenA,
-            _tokenB,
-            _amountADesired,
-            _amountBDesired,
-            amountAMin,
-            amountBMin,
-            address(this),
-            block.timestamp
-        );
-        return (pair, liquidity);
-    }
-
-    function getLPTokensETH(
-        address _token,
-        uint256 _amountTokensDesired,
-        uint256 _amountETHMin,
-        uint256 _slippage
-    ) public payable override onlyOwner returns (uint256) {
-        uint256 amountTokenMin = _getMinAmount(_amountTokensDesired, _slippage);
-        (uint256 amountToken, uint256 amountWETH, uint256 liquidity) = router
-        .addLiquidityETH(
-            _token,
-            _amountTokensDesired,
-            amountTokenMin,
-            _amountETHMin,
-            address(this),
-            block.timestamp
-        );
-        return liquidity;
+    function claimRewards(uint256 _pid) external override onlyOwner {
+        _claimRewards(_pid);
     }
 
     function removeLP(
-        address _tokenA,
-        address _tokenB,
+        address _token0,
+        address _token1,
         uint256 _liquidity,
         uint256 _amountAMin,
         uint256 _amountBMin
     ) external override onlyOwner {
         address pair = UniswapV2Library.pairFor(
             router.factory(),
-            _tokenA,
-            _tokenB
+            _token0,
+            _token1
         );
         IERC20(pair).approve(pair, _liquidity);
         (uint256 amountA, uint256 amountB) = router.removeLiquidity(
-            _tokenA,
-            _tokenB,
+            _token0,
+            _token1,
             _liquidity,
             _amountAMin,
             _amountBMin,
@@ -140,27 +102,6 @@ contract SushiFarmer is
         );
     }
 
-    function depositLP(
-        address _lpToken,
-        uint256 _pid,
-        uint256 _amount
-    ) public override onlyOwner {
-        IERC20(_lpToken).approve(address(chef), _amount);
-        chef.deposit(_pid, _amount, address(this));
-    }
-
-    function withdrawLP(uint256 _pid, uint256 _amount)
-        public
-        override
-        onlyOwner
-    {
-        chef.withdraw(_pid, _amount, address(this));
-    }
-
-    function claimRewards(uint256 _pid) public override onlyOwner {
-        chef.harvest(_pid, address(this));
-    }
-
     function lpBalance(address _pair)
         external
         override
@@ -169,130 +110,14 @@ contract SushiFarmer is
         return IUniswapV2Pair(_pair).balanceOf(address(this));
     }
 
-    function swapRewardsForLPAssets(RewardsForLPData calldata _data)
-        internal
-        override
-        onlyOwner
-        returns (address, uint256)
-    {
-        RewardsForLPData calldata data = _data;
-        // approve reward token spend by the router for this txn
-        IERC20(data.rewardToken).approve(
-            address(router),
-            IERC20(data.rewardToken).balanceOf(address(this))
-        );
-
-        uint256 splitRewardsBalance = IERC20(data.rewardToken)
-        .balanceOf(address(this))
-        .div(2);
-        (uint256 reserveA, uint256 reserveB) = UniswapV2Library.getReserves(
-            router.factory(),
-            data.tokenA,
-            data.tokenB
-        );
-        {
-            // we maybe should calculate this outside
-            uint256[] memory amountsOutA = router.getAmountsOut(
-                splitRewardsBalance,
-                data.tokenAPath
-            );
-
-            // swap reward tokens for token A
-            uint256[] memory amountsA = router.swapExactTokensForTokens(
-                splitRewardsBalance,
-                amountsOutA[amountsOutA.length - 1],
-                data.tokenAPath,
-                address(this),
-                block.timestamp
-            );
-
-            // Method A: based on the amount of token A we were able to get from 50% of rewards
-            // we find out the optimal amount of B to retrieve, then we check if our split rewards
-            // is greater than amountB, if it is, we swap the tokens accordingly.
-            // if we are unable to we revert the whole txn
-
-            // this is the optimal amount of tokenB in exchange for LP tokens.
-            uint256 amountBOptimal = router.quote(
-                amountsA[amountsA.length - 1],
-                reserveA,
-                reserveB
-            );
-
-            // we maybe should calculate this outside
-            uint256[] memory amountsInB = router.getAmountsIn(
-                amountBOptimal,
-                data.tokenBPath
-            );
-
-            require(
-                splitRewardsBalance >= amountsInB[0],
-                "SushiFarmer: You don't have enough rewards for the reserves."
-            );
-
-            // swap reward tokens for token B to get optimal amount
-            router.swapTokensForExactTokens(
-                amountBOptimal,
-                splitRewardsBalance,
-                data.tokenBPath,
-                address(this),
-                block.timestamp
-            );
-
-            // get lp tokens based on swap executed and optimal b amount
-            (address pairA, uint256 liquidityA) = getLPTokens(
-                data.tokenA,
-                data.tokenB,
-                amountsA[amountsA.length - 1],
-                amountBOptimal,
-                data.slippage
-            );
-            return (pairA, liquidityA);
-        }
-        {
-            // Method B: instead of using amountBOptimal, we simply just trade all
-            // 50% of the rewards for token B first, then do a quote on both sides
-            // to see which is more likely.
-            uint256[] memory amountsOutB = router.getAmountsOut(
-                splitRewardsBalance,
-                data.tokenBPath
-            );
-
-            // swap reward tokens for token B
-            uint256[] memory amountsB = router.swapExactTokensForTokens(
-                splitRewardsBalance,
-                amountsOutB[amountsOutB.length - 1],
-                data.tokenBPath,
-                address(this),
-                block.timestamp
-            );
-
-            // this is the optimal amount of tokenA in exchange for LP tokens.
-            uint256 amountAOptimal = router.quote(
-                amountsB[amountsB.length - 1],
-                reserveB,
-                reserveA
-            );
-
-            (address pairB, uint256 liquidityB) = getLPTokens(
-                data.tokenA,
-                data.tokenB,
-                amountAOptimal,
-                amountsB[amountsB.length - 1],
-                data.slippage
-            );
-            return (pairB, liquidityB);
-        }
-    }
-
     function setOwner(address _newOwner) external override onlyOwner {
         transferOwnership(_newOwner);
     }
 
-    function swapAssetsForAsset(
-        address[] calldata _inputAssets,
-        uint256[] calldata _amounts,
-        address _outputAsset
-    ) external override {}
+    function withdrawETH() external payable override onlyOwner {
+        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        require(success, "SushiFarmer: ETH Withdrawal failed.");
+    }
 
     function withdrawFunds(address _asset, uint256 _amount)
         external
@@ -303,8 +128,136 @@ contract SushiFarmer is
         require(success, "SushiFarmer: Withdrawal failed.");
     }
 
-    function withdrawETH() external payable override onlyOwner {
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
-        require(success, "SushiFarmer: ETH Withdrawal failed.");
+    function withdrawLP(uint256 _pid, uint256 _amount)
+        public
+        override
+        onlyOwner
+    {
+        chef.withdraw(_pid, _amount, address(this));
+    }
+
+    function getLPTokensETH(
+        address _token,
+        uint256 _amountTokensDesired,
+        uint256 _amountETHMin,
+        uint256 _slippage
+    ) public payable override returns (uint256) {
+        require(
+            msg.sender == address(this) || msg.sender == owner(),
+            "SushiFarmer: You dont have permission to call this function."
+        );
+        uint256 amountTokenMin = _getMinAmount(_amountTokensDesired, _slippage);
+        (uint256 amountToken, uint256 amountWETH, uint256 liquidity) = router
+        .addLiquidityETH(
+            _token,
+            _amountTokensDesired,
+            amountTokenMin,
+            _amountETHMin,
+            address(this),
+            block.timestamp
+        );
+        return liquidity;
+    }
+
+    function _getLPTokens(
+        address _token0,
+        address _token1,
+        uint256 _amountADesired,
+        uint256 _amountBDesired
+    ) internal override returns (address, uint256) {
+        address pair = UniswapV2Library.pairFor(
+            router.factory(),
+            _token0,
+            _token1
+        );
+
+        IERC20(_token0).approve(pair, _amountADesired);
+        IERC20(_token1).approve(pair, _amountBDesired);
+
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = router
+        .addLiquidity(
+            _token0,
+            _token1,
+            _amountADesired,
+            _amountBDesired,
+            _amountADesired,
+            _amountBDesired,
+            address(this),
+            block.timestamp
+        );
+        return (pair, liquidity);
+    }
+
+    function _createNewLPAndDeposit(CreateLPData memory _data) internal {
+        CreateLPData memory data = _data;
+        (address pair, uint256 liquidity) = _getLPTokens(
+            data.token0,
+            data.token1,
+            data.amountADesired,
+            data.amountBDesired
+        );
+        _depositLP(pair, data.pid, liquidity);
+    }
+
+    function _depositLP(
+        address _lpToken,
+        uint256 _pid,
+        uint256 _amount
+    ) internal override {
+        IERC20(_lpToken).approve(address(chef), _amount);
+        chef.deposit(_pid, _amount, address(this));
+    }
+
+    function _claimRewards(uint256 _pid) internal {
+        chef.harvest(_pid, address(this));
+    }
+
+    function _swapRewardsForLPAssets(RewardsForTokensPaths calldata _data)
+        internal
+        override
+        returns (uint256[] memory)
+    {
+        RewardsForTokensPaths calldata data = _data;
+        address rewardToken = data.token0Path[0];
+        // approve reward token spend by the router for this txn
+        IERC20(rewardToken).approve(
+            address(router),
+            IERC20(rewardToken).balanceOf(address(this))
+        );
+
+        uint256 splitRewardsBalance = IERC20(rewardToken)
+        .balanceOf(address(this))
+        .div(2);
+
+        // swap reward tokens for token A
+        uint256[] memory amounts0 = _swapExactRewardsForTokens(
+            splitRewardsBalance,
+            data.token0Path
+        );
+
+        // swap reward tokens for token B
+        uint256[] memory amounts1 = _swapExactRewardsForTokens(
+            splitRewardsBalance,
+            data.token1Path
+        );
+    }
+
+    function _swapExactRewardsForTokens(
+        uint256 _splitRewardsBalance,
+        address[] calldata _path
+    ) internal returns (uint256[] memory) {
+        uint256[] memory amountsOut = router.getAmountsOut(
+            _splitRewardsBalance,
+            _path
+        );
+        uint256[] memory amounts = router.swapExactTokensForTokens(
+            _splitRewardsBalance,
+            amountsOut[amountsOut.length - 1],
+            _path,
+            address(this),
+            block.timestamp
+        );
+
+        return amounts;
     }
 }
