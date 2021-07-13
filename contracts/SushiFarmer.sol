@@ -13,11 +13,9 @@ contract SushiFarmer is
     Farmer(IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506))
 {
     IMiniChefV2 public chef;
-    IMiniChefV2 public rewardTimer;
 
-    constructor(IMiniChefV2 _chef, IMiniChefV2 _rewardTimer) public {
+    constructor(IMiniChefV2 _chef) public {
         chef = _chef;
-        rewardTimer = _rewardTimer;
     }
 
     /** @dev This function allows the user to create a new LP position as

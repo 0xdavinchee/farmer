@@ -8,10 +8,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await deploy("SushiFarmer", {
     from: deployer,
-    args: [
-      process.env.MINI_CHEF_V2_ADDRESS,
-      process.env.COMPLEX_REWARD_TIMER_ADDRESS,
-    ],
+    args: [process.env.MINI_CHEF_V2_ADDRESS],
     log: true,
   });
 };
