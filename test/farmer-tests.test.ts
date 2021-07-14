@@ -15,12 +15,14 @@ import {
   ChainId,
   FACTORY_ADDRESS,
   computePairAddress,
+  Pair,
   Token,
 } from "@sushiswap/sdk";
 import { setupUser } from "./utils";
 import { ADDRESS } from "./utils/constants";
 import { IBaseTestObject, ISetupProps } from "./utils/interfaces";
 import { BigNumber } from "ethers";
+import { expect } from "chai";
 
 const SUSHI = "SUSHI";
 const MATIC = "WMATIC";
@@ -80,7 +82,7 @@ const setup = async (data: ISetupProps) => {
   const setupObject = {
     ...contracts,
     deployer: await setupUser(deployer, contracts),
-    whale: await setupUser(whale, contracts)
+    whale: await setupUser(whale, contracts),
   };
 
   // whale is owner of sushifarmer
@@ -248,20 +250,14 @@ describe("SushiFarmer Tests", function () {
     const rewardsFuture = await MiniChef.pendingSushi(5, SushiFarmer.address);
     console.log("rewardsFuture: ", format(rewardsFuture));
 
-    // get initial rewards balance
-    console.log("initial rewards balance: ");
-    await getRewardsBalance(whale);
-
-    const signer = await ethers.getSigner(whale.address);
     // harvest rewards
-    await SushiFarmer.connect(signer).claimRewards(5, { gasLimit: 10000000 });
-    console.log("updated rewards balance: ");
-    await getRewardsBalance(whale);
+    await whale.SushiFarmer.claimRewards(5, { gasLimit: 10000000 });
+
     const rewardsClaimed = await MiniChef.pendingSushi(5, SushiFarmer.address);
     console.log("rewardsClaimed: ", format(rewardsClaimed));
   });
 
-  it("Should be able to remove LP position from contract.", async function () {
+  it("Should be able to remove LP position from contract and withdraw.", async function () {
     const {
       MiniChef,
       SushiFarmer,
@@ -292,10 +288,14 @@ describe("SushiFarmer Tests", function () {
     console.log("totalDebt: ", format(totalDebt));
     console.log("lpBalanceInitial: ", format(lpBalanceInitial));
 
-    await whale.SushiFarmer.withdrawLP(5, staked, { gasLimit: 1000000 });
+    await expect(whale.SushiFarmer.withdrawLP(5, staked, { gasLimit: 1000000 }))
+      .to.emit(MiniChef, "Withdraw")
+      .withArgs(SushiFarmer.address, 5, staked, SushiFarmer.address);
 
     // this for whatever reason is still 0, but I expect it to be equal to `staked`
-    const lpBalanceAfterWithdraw = await WETH_DAI_SLP.balanceOf(SushiRouter.address);
+    const lpBalanceAfterWithdraw = await WETH_DAI_SLP.balanceOf(
+      SushiRouter.address
+    );
     console.log("lpBalanceAfterWithdraw: ", format(lpBalanceAfterWithdraw));
 
     // get final staked amount in the mini chef (should be 0)
@@ -305,6 +305,14 @@ describe("SushiFarmer Tests", function () {
     );
     console.log("finalStaked amount: ", format(finalStaked));
     console.log("finalTotalDebt: ", format(finalTotalDebt));
+
+    await expect(
+      whale.SushiFarmer.withdrawFunds(WETH_DAI_SLP.address, lpBalanceInitial, {
+        gasLimit: 1000000,
+      })
+    )
+      .to.emit(WETH_DAI_SLP, "Transfer")
+      .withArgs(SushiFarmer.address, whale.address, lpBalanceInitial);
   });
 
   it("Should be able to swap rewards for LP assets.", async function () {});
