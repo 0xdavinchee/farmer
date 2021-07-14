@@ -77,11 +77,17 @@ const setup = async (data: ISetupProps) => {
     )) as IERC20,
   };
 
-  return {
+  const setupObject = {
     ...contracts,
     deployer: await setupUser(deployer, contracts),
-    whale: await setupUser(whale, contracts),
+    whale: await setupUser(whale, contracts)
   };
+
+  // whale is owner of sushifarmer
+  await setupObject.SushiFarmer.setOwner(whale);
+  console.log("SushiFarmer Addr: ", contracts.SushiFarmer.address);
+
+  return setupObject;
 };
 
 const addLiquidityAndDeposit = async (
@@ -91,8 +97,6 @@ const addLiquidityAndDeposit = async (
   v2Pair: IUniswapV2Pair
 ) => {
   const { farmer, whale, router, miniChef } = baseObject;
-  // whale is owner of sushifarmer
-  await farmer.setOwner(whale.address);
 
   // transfer funds to the sushi farmer contract
   await whale.IndependentToken.transfer(
@@ -211,8 +215,6 @@ describe("SushiFarmer Tests", function () {
     await addLiquidityAndDeposit(baseObject, WETH, DAI, WETH_DAI_SLP);
   });
 
-  // it("Should not allow non-owner to carry out any actions.", async function () {});
-
   it("Should be able to claim rewards.", async function () {
     const {
       MiniChef,
@@ -221,7 +223,6 @@ describe("SushiFarmer Tests", function () {
       IndependentToken: WETH,
       DependentToken: DAI,
       V2Pair: WETH_DAI_SLP,
-      Sushi,
       whale,
     } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
@@ -251,14 +252,60 @@ describe("SushiFarmer Tests", function () {
     console.log("initial rewards balance: ");
     await getRewardsBalance(whale);
 
+    const signer = await ethers.getSigner(whale.address);
     // harvest rewards
-    await whale.SushiFarmer.claimRewards(5);
-    await hre.network.provider.send("evm_mine");
+    await SushiFarmer.connect(signer).claimRewards(5, { gasLimit: 10000000 });
     console.log("updated rewards balance: ");
     await getRewardsBalance(whale);
+    const rewardsClaimed = await MiniChef.pendingSushi(5, SushiFarmer.address);
+    console.log("rewardsClaimed: ", format(rewardsClaimed));
   });
 
-  it("Should be able to remove LP position from contract.", async function () {});
+  it("Should be able to remove LP position from contract.", async function () {
+    const {
+      MiniChef,
+      SushiFarmer,
+      SushiRouter,
+      IndependentToken: WETH,
+      DependentToken: DAI,
+      V2Pair: WETH_DAI_SLP,
+      whale,
+    } = await setup({
+      pair: ADDRESS.WETH_DAI_SLP,
+      independentToken: ADDRESS.WETH,
+      dependentToken: ADDRESS.DAI,
+    });
+
+    const baseObject: IBaseTestObject = {
+      farmer: SushiFarmer,
+      miniChef: MiniChef,
+      router: SushiRouter,
+      whale,
+    };
+    // add LP position and deposit into minichef
+    await addLiquidityAndDeposit(baseObject, WETH, DAI, WETH_DAI_SLP);
+
+    const lpBalanceInitial = await WETH_DAI_SLP.balanceOf(SushiRouter.address);
+    // get prior data from the mini chef
+    const [staked, totalDebt] = await MiniChef.userInfo(5, SushiFarmer.address);
+    console.log("staked amount: ", format(staked));
+    console.log("totalDebt: ", format(totalDebt));
+    console.log("lpBalanceInitial: ", format(lpBalanceInitial));
+
+    await whale.SushiFarmer.withdrawLP(5, staked, { gasLimit: 1000000 });
+
+    // this for whatever reason is still 0, but I expect it to be equal to `staked`
+    const lpBalanceAfterWithdraw = await WETH_DAI_SLP.balanceOf(SushiRouter.address);
+    console.log("lpBalanceAfterWithdraw: ", format(lpBalanceAfterWithdraw));
+
+    // get final staked amount in the mini chef (should be 0)
+    const [finalStaked, finalTotalDebt] = await MiniChef.userInfo(
+      5,
+      SushiFarmer.address
+    );
+    console.log("finalStaked amount: ", format(finalStaked));
+    console.log("finalTotalDebt: ", format(finalTotalDebt));
+  });
 
   it("Should be able to swap rewards for LP assets.", async function () {});
 
