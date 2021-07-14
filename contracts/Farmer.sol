@@ -15,6 +15,7 @@ abstract contract Farmer is Ownable {
         uint256 pid;
         uint256 amountADesired;
         uint256 amountBDesired;
+        address pair;
         address token0;
         address token1;
     }
@@ -40,7 +41,7 @@ abstract contract Farmer is Ownable {
         address _token1,
         uint256 _amountADesired,
         uint256 _amountBDesired
-    ) internal virtual returns (address, uint256);
+    ) internal virtual returns (uint256);
 
     /** @dev Allows this contract to interact with a pair contract
      * and add liquidity to a pair by converting the necessary

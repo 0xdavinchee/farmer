@@ -1,3 +1,11 @@
+import {
+  IERC20,
+  IMiniChefV2,
+  IUniswapV2Pair,
+  IUniswapV2Router02,
+  SushiFarmer,
+} from "../../typechain";
+
 export interface IExchangePair {
   id: string;
   token0: IExchangeToken;
@@ -23,4 +31,28 @@ export interface IExchangeToken {
   symbol: string;
   totalSupply: number;
   derivedETH: number;
+}
+
+export interface IBaseTestObject {
+  farmer: SushiFarmer;
+  miniChef: IMiniChefV2;
+  router: IUniswapV2Router02;
+  whale: {
+    address: string;
+  } & {
+    MiniChef: IMiniChefV2;
+    SushiFarmer: SushiFarmer;
+    SushiRouter: IUniswapV2Router02;
+    Sushi: IERC20;
+    WMATIC: IERC20;
+    V2Pair: IUniswapV2Pair;
+    IndependentToken: IERC20;
+    DependentToken: IERC20;
+  };
+}
+
+export interface ISetupProps {
+  pair: string;
+  independentToken: string;
+  dependentToken: string;
 }

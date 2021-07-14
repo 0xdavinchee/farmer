@@ -165,7 +165,7 @@ contract SushiFarmer is
         address _token1,
         uint256 _amountADesired,
         uint256 _amountBDesired
-    ) external onlyOwner returns (address, uint256) {
+    ) external onlyOwner returns (uint256) {
         return _getLPTokens(_token0, _token1, _amountADesired, _amountBDesired);
     }
 
@@ -174,13 +174,7 @@ contract SushiFarmer is
         address _token1,
         uint256 _amountADesired,
         uint256 _amountBDesired
-    ) internal override returns (address, uint256) {
-        // TODO: pass in the pair addr to save on some gas
-        address pair = UniswapV2Library.pairFor(
-            router.factory(),
-            _token0,
-            _token1
-        );
+    ) internal override returns (uint256) {
         IERC20(_token0).approve(address(router), _amountADesired);
         IERC20(_token1).approve(address(router), _amountBDesired);
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
@@ -194,18 +188,18 @@ contract SushiFarmer is
             address(this),
             block.timestamp
         );
-        return (pair, liquidity);
+        return liquidity;
     }
 
     function _createNewLPAndDeposit(CreateLPData memory _data) internal {
         CreateLPData memory data = _data;
-        (address pair, uint256 liquidity) = _getLPTokens(
+        uint256 liquidity = _getLPTokens(
             data.token0,
             data.token1,
             data.amountADesired,
             data.amountBDesired
         );
-        _depositLP(pair, data.pid, liquidity);
+        _depositLP(data.pair, data.pid, liquidity);
     }
 
     function _depositLP(
