@@ -16,9 +16,7 @@ import { tokens } from "@sushiswap/default-token-list/build/sushiswap-default.to
 import {
   ChainId,
   computePairAddress,
-  CurrencyAmount,
   FACTORY_ADDRESS,
-  Trade,
   Token,
 } from "@sushiswap/sdk";
 import { setupUser } from "./utils";
@@ -30,7 +28,7 @@ import {
   ISetupProps,
 } from "./utils/interfaces";
 import { expect } from "chai";
-import { createPairs, format, pairAddresses, tokenObject } from "./utils/helper";
+import { createPairs, format, getAutoCompoundData, pairAddresses, tokenObject } from "./utils/helper";
 
 // TODO: Move helper functions to helper file
 // TODO: Ensure that tokens are sorted in correct order before passing to contracts
@@ -415,53 +413,7 @@ describe("SushiFarmer Tests", function () {
 
     const pairs = createPairs(basePairs);
 
-    // // get the pending SUSHI/MATIC rewards - divide this number by 2
-    // // this is the amount in we pass in here:
-    const sushiWETHTrade = Trade.bestTradeExactIn(
-      pairs,
-      CurrencyAmount.fromRawAmount(
-        tokenObject["SUSHI"],
-        splitSushiRewards.toString()
-      ),
-      tokenObject["WETH"]
-    );
-    const sushiDAITrade = Trade.bestTradeExactIn(
-      pairs,
-      CurrencyAmount.fromRawAmount(
-        tokenObject["SUSHI"],
-        splitSushiRewards.toString()
-      ),
-      tokenObject["DAI"]
-    );
-
-    const wMaticWETHTrade = Trade.bestTradeExactIn(
-      pairs,
-      CurrencyAmount.fromRawAmount(
-        tokenObject["WMATIC"],
-        splitWMaticRewards.toString()
-      ),
-      tokenObject["WETH"]
-    );
-    const wMaticDAITrade = Trade.bestTradeExactIn(
-      pairs,
-      CurrencyAmount.fromRawAmount(
-        tokenObject["WMATIC"],
-        splitWMaticRewards.toString()
-      ),
-      tokenObject["DAI"]
-    );
-
-    // get prior data from the mini chef
-    const data = [
-      {
-        tokenAPath: sushiWETHTrade[0].route.path.map((x) => x.address),
-        tokenBPath: sushiDAITrade[0].route.path.map((x) => x.address),
-      },
-      {
-        tokenAPath: wMaticWETHTrade[0].route.path.map((x) => x.address),
-        tokenBPath: wMaticDAITrade[0].route.path.map((x) => x.address),
-      },
-    ];
+    const data = getAutoCompoundData(pairs, splitSushiRewards, splitWMaticRewards, ["WETH", "DAI"]);
 
     await whale.SushiFarmer.autoCompoundExistingLPPosition(
       5,
