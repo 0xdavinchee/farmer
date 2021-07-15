@@ -18,6 +18,8 @@ contract SushiFarmer is
         chef = _chef;
     }
 
+    event LPDeposited(uint256 pid, address pair, uint256 amount);
+
     /** @dev This function allows the user to create a new LP position as
      * long as the contract holds enough tokens given the desired amounts
      * and slippage allowance.
@@ -200,6 +202,8 @@ contract SushiFarmer is
             data.amountBDesired
         );
         _depositLP(data.pair, data.pid, liquidity);
+
+        emit LPDeposited(data.pid, data.pair, liquidity);
     }
 
     function _depositLP(
