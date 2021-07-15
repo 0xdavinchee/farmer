@@ -43,8 +43,6 @@ export interface IBaseTestObject {
   } & {
     ComplexRewardTimer: IComplexRewardTimer;
     MiniChef: IMiniChefV2;
-    SushiFarmer: SushiFarmer;
-    SushiRouter: IUniswapV2Router02;
     Sushi: IERC20;
     WMATIC: IERC20;
     V2Pair: IUniswapV2Pair;
