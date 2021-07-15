@@ -1,4 +1,5 @@
 import {
+  IComplexRewardTimer,
   IERC20,
   IMiniChefV2,
   IUniswapV2Pair,
@@ -7,36 +8,90 @@ import {
 } from "../typechain";
 import hre, { ethers, deployments, getNamedAccounts } from "hardhat";
 import ChefABI from "./abi/MiniChef.json";
+import ComplexRewardTimerABI from "./abi/ComplexRewardTimer.json";
 import RouterABI from "@sushiswap/core/build/abi/IUniswapV2Router02.json";
 import PairABI from "@sushiswap/core/build/abi/IUniswapV2Pair.json";
 import ERC20ABI from "@sushiswap/core/build/abi/ERC20.json";
 import { tokens } from "@sushiswap/default-token-list/build/sushiswap-default.tokenlist.json";
 import {
   ChainId,
-  FACTORY_ADDRESS,
   computePairAddress,
+  CurrencyAmount,
+  FACTORY_ADDRESS,
   Pair,
+  Trade,
   Token,
 } from "@sushiswap/sdk";
 import { setupUser } from "./utils";
 import { ADDRESS } from "./utils/constants";
-import { IBaseTestObject, ISetupProps } from "./utils/interfaces";
+import { sushi } from "@lufycz/sushi-data";
+import {
+  IBaseTestObject,
+  IExchangePair,
+  IExchangeToken,
+  ISetupProps,
+} from "./utils/interfaces";
 import { BigNumber } from "ethers";
 import { expect } from "chai";
 
-const SUSHI = "SUSHI";
-const MATIC = "WMATIC";
+// TODO: Move helper functions to helper file
+// TODO: Ensure that tokens are sorted in correct order before passing to contracts
 
 const format = (x: BigNumber) => ethers.utils.formatUnits(x.toString());
 
 const pairs = (arr: Token[]) =>
   arr.map((v, i) => arr.slice(i + 1).map((w) => [v, w])).flat() as Token[][];
 
+const maticTokens = tokens
+  .filter((x) => x.chainId === ChainId.MATIC)
+  .filter((x) =>
+    ["DAI", "USDC", "USDT", "WETH", "SUSHI", "WMATIC"].includes(x.symbol)
+  )
+  .map((x) => new Token(x.chainId, x.address, x.decimals, x.symbol, x.name));
+
+const maticPairs = pairs(maticTokens);
+
+const pairAddresses = maticPairs.map(([tokenA, tokenB]) => {
+  return tokenA &&
+    tokenB &&
+    tokenA.chainId === tokenB.chainId &&
+    !tokenA.equals(tokenB) &&
+    FACTORY_ADDRESS[tokenA.chainId]
+    ? computePairAddress({
+        factoryAddress: FACTORY_ADDRESS[tokenA.chainId],
+        tokenA,
+        tokenB,
+      })
+    : undefined;
+});
+
 const tokenToObject = (arr: Token[]) =>
   arr.reduce((x, y) => {
     x[y.symbol as string] = y;
     return x;
   }, {} as any);
+
+const tokenObject: { [key: string]: Token } = tokenToObject(maticTokens);
+
+const parseUnits = (symbol: string, reserves: number) =>
+  ethers.utils
+    .parseUnits(reserves.toString(), tokenObject[symbol].decimals)
+    .toString();
+
+const createPairs = (pairs: IExchangePair[]) => {
+  return pairs.map((x) => {
+    return new Pair(
+      CurrencyAmount.fromRawAmount(
+        tokenObject[x.token0.symbol],
+        parseUnits(x.token0.symbol, x.reserve0)
+      ),
+      CurrencyAmount.fromRawAmount(
+        tokenObject[x.token1.symbol],
+        parseUnits(x.token1.symbol, x.reserve1)
+      )
+    );
+  });
+};
 
 const setup = async (data: ISetupProps) => {
   await deployments.fixture(["SushiFarmer"]);
@@ -51,6 +106,10 @@ const setup = async (data: ISetupProps) => {
 
   const contracts = {
     // these contracts will always have the same addresses
+    ComplexRewardTimer: (await ethers.getContractAt(
+      ComplexRewardTimerABI,
+      ADDRESS.COMPLEX_REWARD_TIMER
+    )) as IComplexRewardTimer,
     MiniChef: (await ethers.getContractAt(
       ChefABI,
       ADDRESS.MINI_CHEF
@@ -163,8 +222,8 @@ const addLiquidityAndDeposit = async (
       amountADesired: primaryTokenBalance,
       amountBDesired: dependentTokeRequired,
       pair,
-      token0: independentToken.address,
-      token1: dependentToken.address,
+      tokenA: independentToken.address,
+      tokenB: dependentToken.address,
     },
     { gasLimit: 10000000 }
   );
@@ -183,24 +242,40 @@ const addLiquidityAndDeposit = async (
   return { staked, totalDebt };
 };
 
-const getRewardsBalance = async (whale: any) => {
+const getContractRewardTokensBalance = async (whale: any) => {
   const wMaticBalance = await whale.WMATIC.balanceOf(ADDRESS.USER);
   const sushiBalance = await whale.Sushi.balanceOf(ADDRESS.USER);
   console.log("wMaticBalance", format(wMaticBalance));
   console.log("sushiBalance", format(sushiBalance));
 };
 
+const getPendingRewardBalance = async (
+  miniChef: IMiniChefV2,
+  complexRewardTimer: IComplexRewardTimer,
+  pid: number,
+  user: string
+) => {
+  const [wMaticRewardsAddresses, wMaticRewards] =
+    await complexRewardTimer.pendingTokens(pid, user, 0);
+  const sushiRewards = await miniChef.pendingSushi(pid, user);
+  console.log("wMaticRewardsAddresses", wMaticRewardsAddresses);
+  console.log("wMaticRewards", format(wMaticRewards[0]));
+  console.log("sushiRewards", format(sushiRewards));
+
+  return { wMaticRewards: wMaticRewards[0], sushiRewards };
+};
+
 describe("SushiFarmer Tests", function () {
-  it("Should allow me to get my balances", async () => {
+  it.skip("Should allow me to get my balances", async () => {
     const { whale } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
       dependentToken: ADDRESS.DAI,
     });
-    await getRewardsBalance(whale);
+    await getContractRewardTokensBalance(whale);
   });
 
-  it("Should allow me to impersonate account and add liquidity and deposit.", async function () {
+  it.skip("Should allow me to impersonate account and add liquidity and deposit.", async function () {
     const {
       MiniChef,
       SushiFarmer,
@@ -223,7 +298,7 @@ describe("SushiFarmer Tests", function () {
     await addLiquidityAndDeposit(baseObject, WETH, DAI, WETH_DAI_SLP);
   });
 
-  it("Should be able to claim rewards.", async function () {
+  it.skip("Should be able to claim rewards.", async function () {
     const {
       MiniChef,
       SushiFarmer,
@@ -270,7 +345,7 @@ describe("SushiFarmer Tests", function () {
     console.log("pendingRewardsAfterClaim: ", format(pendingRewardsAfterClaim));
   });
 
-  it("Should be able to remove LP position from contract and withdraw.", async function () {
+  it.skip("Should be able to remove LP position from contract and withdraw.", async function () {
     const {
       MiniChef,
       SushiFarmer,
@@ -332,7 +407,133 @@ describe("SushiFarmer Tests", function () {
     console.log("finalTotalDebt: ", format(finalTotalDebt));
   });
 
-  it("Should be able to swap rewards for LP assets.", async function () {});
+  it("Should be able to swap rewards for LP assets.", async function () {
+    const {
+      ComplexRewardTimer,
+      MiniChef,
+      SushiFarmer,
+      SushiRouter,
+      IndependentToken: WETH,
+      DependentToken: DAI,
+      V2Pair: WETH_DAI_SLP,
+      whale,
+    } = await setup({
+      pair: ADDRESS.WETH_DAI_SLP,
+      independentToken: ADDRESS.WETH,
+      dependentToken: ADDRESS.DAI,
+    });
+
+    const baseObject: IBaseTestObject = {
+      farmer: SushiFarmer,
+      miniChef: MiniChef,
+      router: SushiRouter,
+      whale,
+    };
+
+    console.log("\n********** Pre Deposit Rewards **********");
+    // should console 0
+    await getPendingRewardBalance(
+      MiniChef,
+      ComplexRewardTimer,
+      5,
+      SushiFarmer.address
+    );
+
+    // add LP position and deposit into minichef
+    const { staked: priorStaked } = await addLiquidityAndDeposit(
+      baseObject,
+      WETH,
+      DAI,
+      WETH_DAI_SLP
+    );
+
+    // increase time and mine a new block
+    await hre.network.provider.send("evm_increaseTime", [86400 * 30]);
+    await hre.network.provider.send("evm_mine");
+
+    console.log("\n********** Post Deposit + Time Passed Rewards **********");
+
+    // should console more than 0
+    const { sushiRewards, wMaticRewards } = await getPendingRewardBalance(
+      MiniChef,
+      ComplexRewardTimer,
+      5,
+      SushiFarmer.address
+    );
+    const splitSushiRewards = sushiRewards.div(2);
+    const splitWMaticRewards = wMaticRewards.div(2);
+
+    // go back a little to make up for the graph indexing lag
+    const latestBlock = (await sushi.blocks.latestBlock({ chainId: 137 })) - 2;
+    const basePairs: IExchangePair[] = await sushi.exchange.pairs({
+      chainId: 137,
+      latestBlock, // go back one second just to be safe
+      addresses: pairAddresses, // pair addresses (base tokens)
+    });
+
+    const pairs = createPairs(basePairs);
+
+    // // get the pending SUSHI/MATIC rewards - divide this number by 2
+    // // this is the amount in we pass in here:
+    const sushiWETHTrade = Trade.bestTradeExactIn(
+      pairs,
+      CurrencyAmount.fromRawAmount(
+        tokenObject["SUSHI"],
+        splitSushiRewards.toString()
+      ),
+      tokenObject["WETH"]
+    );
+    const sushiDAITrade = Trade.bestTradeExactIn(
+      pairs,
+      CurrencyAmount.fromRawAmount(
+        tokenObject["SUSHI"],
+        splitSushiRewards.toString()
+      ),
+      tokenObject["DAI"]
+    );
+
+    const wMaticWETHTrade = Trade.bestTradeExactIn(
+      pairs,
+      CurrencyAmount.fromRawAmount(
+        tokenObject["WMATIC"],
+        splitWMaticRewards.toString()
+      ),
+      tokenObject["WETH"]
+    );
+    const wMaticDAITrade = Trade.bestTradeExactIn(
+      pairs,
+      CurrencyAmount.fromRawAmount(
+        tokenObject["WMATIC"],
+        splitWMaticRewards.toString()
+      ),
+      tokenObject["DAI"]
+    );
+
+    // get prior data from the mini chef
+    const data = [
+      {
+        tokenAPath: sushiWETHTrade[0].route.path.map((x) => x.address),
+        tokenBPath: sushiDAITrade[0].route.path.map((x) => x.address),
+      },
+      {
+        tokenAPath: wMaticWETHTrade[0].route.path.map((x) => x.address),
+        tokenBPath: wMaticDAITrade[0].route.path.map((x) => x.address),
+      },
+    ];
+
+    await whale.SushiFarmer.autoCompoundExistingLPPosition(
+      5,
+      WETH_DAI_SLP.address,
+      data,
+      { gasLimit: 1000000 }
+    );
+
+    // get our staked amount from the mini chef
+    const [staked] = await MiniChef.userInfo(5, SushiFarmer.address);
+    console.log("********** Autocompounded LP Position in MiniChef **********");
+    console.log("priorStaked amount: ", format(priorStaked));
+    console.log("compounded staked amount: ", format(staked)); // this should be greater than priorStaked amount
+  });
 
   it("Should be able to swap LP tokens for underlying assets.", async function () {});
 

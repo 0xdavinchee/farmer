@@ -1,14 +1,21 @@
 pragma solidity 0.6.12;
 
-interface IMiniChefV2 {
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+interface IComplexRewardTimer {
     /// @notice View function to see pending SUSHI on frontend.
-    /// @param _pid The index of the pool. See `poolInfo`.
-    /// @param _user Address of user.
-    /// @return pending SUSHI reward for a given user.
-    function pendingSushi(uint256 _pid, address _user)
+    /// @param pid The index of the pool. See `poolInfo`.
+    /// @param user Address of user.
+    /// @return rewardTokens
+    /// @return rewardAmounts
+    function pendingTokens(
+        uint256 pid,
+        address user,
+        uint256
+    )
         external
         view
-        returns (uint256 pending);
+        returns (IERC20[] memory rewardTokens, uint256[] memory rewardAmounts);
 
     /// @notice Deposit LP tokens to MCV2 for SUSHI allocation.
     /// @param pid The index of the pool. See `poolInfo`.

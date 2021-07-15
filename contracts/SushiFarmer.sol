@@ -39,6 +39,7 @@ contract SushiFarmer is
      */
     function autoCompoundExistingLPPosition(
         uint256 _pid,
+        address _pair,
         RewardsForTokensPaths[] calldata _data
     ) external onlyOwner {
         _claimRewards(_pid);
@@ -48,15 +49,20 @@ contract SushiFarmer is
             uint256[] memory amounts = _swapRewardsForLPAssets(_data[i]);
         }
 
-        address token0 = _data[0].token0Path[_data[0].token0Path.length - 1];
-        address token1 = _data[0].token1Path[_data[0].token1Path.length - 1];
+        address tokenA = _data[0].tokenAPath[_data[0].tokenAPath.length - 1];
+        address tokenB = _data[0].tokenBPath[_data[0].tokenBPath.length - 1];
+        (address token0, address token1) = UniswapV2Library.sortTokens(tokenA, tokenB);
+        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(_pair).getReserves();
+
+        uint256 amountB = router.quote(IERC20(token0).balanceOf(address(this)), reserve0, reserve1);
 
         CreateLPData memory data;
         data.pid = _pid;
-        data.token0 = token0;
-        data.token1 = token1;
+        data.pair = _pair;
+        data.tokenA = token0;
+        data.tokenB = token1;
         data.amountADesired = IERC20(token0).balanceOf(address(this));
-        data.amountBDesired = IERC20(token1).balanceOf(address(this));
+        data.amountBDesired = amountB;
         _createNewLPAndDeposit(data);
     }
 
@@ -65,21 +71,21 @@ contract SushiFarmer is
     }
 
     function removeLP(
-        address _token0,
-        address _token1,
+        address _tokenA,
+        address _tokenB,
         uint256 _liquidity,
         uint256 _amountAMin,
         uint256 _amountBMin
     ) external override onlyOwner {
         address pair = UniswapV2Library.pairFor(
             router.factory(),
-            _token0,
-            _token1
+            _tokenA,
+            _tokenB
         );
         IERC20(pair).approve(pair, _liquidity);
         (uint256 amountA, uint256 amountB) = router.removeLiquidity(
-            _token0,
-            _token1,
+            _tokenA,
+            _tokenB,
             _liquidity,
             _amountAMin,
             _amountBMin,
@@ -160,29 +166,29 @@ contract SushiFarmer is
         );
         return liquidity;
     }
-    
+
     /** @dev Really only to be used for testing. */
     function getLPTokens(
-        address _token0,
-        address _token1,
+        address _tokenA,
+        address _tokenB,
         uint256 _amountADesired,
         uint256 _amountBDesired
     ) external onlyOwner returns (uint256) {
-        return _getLPTokens(_token0, _token1, _amountADesired, _amountBDesired);
+        return _getLPTokens(_tokenA, _tokenB, _amountADesired, _amountBDesired);
     }
 
     function _getLPTokens(
-        address _token0,
-        address _token1,
+        address _tokenA,
+        address _tokenB,
         uint256 _amountADesired,
         uint256 _amountBDesired
     ) internal override returns (uint256) {
-        IERC20(_token0).approve(address(router), _amountADesired);
-        IERC20(_token1).approve(address(router), _amountBDesired);
+        IERC20(_tokenA).approve(address(router), _amountADesired);
+        IERC20(_tokenB).approve(address(router), _amountBDesired);
         (uint256 amountA, uint256 amountB, uint256 liquidity) = router
         .addLiquidity(
-            _token0,
-            _token1,
+            _tokenA,
+            _tokenB,
             _amountADesired,
             _amountBDesired,
             _amountADesired,
@@ -196,8 +202,8 @@ contract SushiFarmer is
     function _createNewLPAndDeposit(CreateLPData memory _data) internal {
         CreateLPData memory data = _data;
         uint256 liquidity = _getLPTokens(
-            data.token0,
-            data.token1,
+            data.tokenA,
+            data.tokenB,
             data.amountADesired,
             data.amountBDesired
         );
@@ -225,7 +231,7 @@ contract SushiFarmer is
         returns (uint256[] memory)
     {
         RewardsForTokensPaths calldata data = _data;
-        address rewardToken = data.token0Path[0];
+        address rewardToken = data.tokenAPath[0];
         // approve reward token spend by the router for this txn
         IERC20(rewardToken).approve(
             address(router),
@@ -239,13 +245,13 @@ contract SushiFarmer is
         // swap reward tokens for token A
         uint256[] memory amounts0 = _swapExactRewardsForTokens(
             splitRewardsBalance,
-            data.token0Path
+            data.tokenAPath
         );
 
         // swap reward tokens for token B
         uint256[] memory amounts1 = _swapExactRewardsForTokens(
             splitRewardsBalance,
-            data.token1Path
+            data.tokenBPath
         );
     }
 

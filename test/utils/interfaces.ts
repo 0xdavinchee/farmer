@@ -1,4 +1,5 @@
 import {
+  IComplexRewardTimer,
   IERC20,
   IMiniChefV2,
   IUniswapV2Pair,
@@ -40,6 +41,7 @@ export interface IBaseTestObject {
   whale: {
     address: string;
   } & {
+    ComplexRewardTimer: IComplexRewardTimer;
     MiniChef: IMiniChefV2;
     SushiFarmer: SushiFarmer;
     SushiRouter: IUniswapV2Router02;

@@ -16,13 +16,13 @@ abstract contract Farmer is Ownable {
         uint256 amountADesired;
         uint256 amountBDesired;
         address pair;
-        address token0;
-        address token1;
+        address tokenA;
+        address tokenB;
     }
 
     struct RewardsForTokensPaths {
-        address[] token0Path; // first addr: reward token, last addr: _token0
-        address[] token1Path; // first addr: reward token, last addr: _token1
+        address[] tokenAPath; // first addr: reward token, last addr: _tokenA
+        address[] tokenBPath; // first addr: reward token, last addr: _tokenB
     }
 
     uint256 public constant ONE_HUNDRED_PERCENT = 1000;
@@ -37,8 +37,8 @@ abstract contract Farmer is Ownable {
      * assets to get LP tokens in return.
      */
     function _getLPTokens(
-        address _token0,
-        address _token1,
+        address _tokenA,
+        address _tokenB,
         uint256 _amountADesired,
         uint256 _amountBDesired
     ) internal virtual returns (uint256);
@@ -59,8 +59,8 @@ abstract contract Farmer is Ownable {
      * for the underlying tokens.
      */
     function removeLP(
-        address _token0,
-        address _token1,
+        address _tokenA,
+        address _tokenB,
         uint256 _liquidity,
         uint256 _amountAMin,
         uint256 _amountBMin
