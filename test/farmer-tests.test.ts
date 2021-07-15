@@ -18,7 +18,6 @@ import {
   computePairAddress,
   CurrencyAmount,
   FACTORY_ADDRESS,
-  Pair,
   Trade,
   Token,
 } from "@sushiswap/sdk";
@@ -28,70 +27,13 @@ import { sushi } from "@lufycz/sushi-data";
 import {
   IBaseTestObject,
   IExchangePair,
-  IExchangeToken,
   ISetupProps,
 } from "./utils/interfaces";
-import { BigNumber } from "ethers";
 import { expect } from "chai";
+import { createPairs, format, pairAddresses, tokenObject } from "./utils/helper";
 
 // TODO: Move helper functions to helper file
 // TODO: Ensure that tokens are sorted in correct order before passing to contracts
-
-const format = (x: BigNumber) => ethers.utils.formatUnits(x.toString());
-
-const pairs = (arr: Token[]) =>
-  arr.map((v, i) => arr.slice(i + 1).map((w) => [v, w])).flat() as Token[][];
-
-const maticTokens = tokens
-  .filter((x) => x.chainId === ChainId.MATIC)
-  .filter((x) =>
-    ["DAI", "USDC", "USDT", "WETH", "SUSHI", "WMATIC"].includes(x.symbol)
-  )
-  .map((x) => new Token(x.chainId, x.address, x.decimals, x.symbol, x.name));
-
-const maticPairs = pairs(maticTokens);
-
-const pairAddresses = maticPairs.map(([tokenA, tokenB]) => {
-  return tokenA &&
-    tokenB &&
-    tokenA.chainId === tokenB.chainId &&
-    !tokenA.equals(tokenB) &&
-    FACTORY_ADDRESS[tokenA.chainId]
-    ? computePairAddress({
-        factoryAddress: FACTORY_ADDRESS[tokenA.chainId],
-        tokenA,
-        tokenB,
-      })
-    : undefined;
-});
-
-const tokenToObject = (arr: Token[]) =>
-  arr.reduce((x, y) => {
-    x[y.symbol as string] = y;
-    return x;
-  }, {} as any);
-
-const tokenObject: { [key: string]: Token } = tokenToObject(maticTokens);
-
-const parseUnits = (symbol: string, reserves: number) =>
-  ethers.utils
-    .parseUnits(reserves.toString(), tokenObject[symbol].decimals)
-    .toString();
-
-const createPairs = (pairs: IExchangePair[]) => {
-  return pairs.map((x) => {
-    return new Pair(
-      CurrencyAmount.fromRawAmount(
-        tokenObject[x.token0.symbol],
-        parseUnits(x.token0.symbol, x.reserve0)
-      ),
-      CurrencyAmount.fromRawAmount(
-        tokenObject[x.token1.symbol],
-        parseUnits(x.token1.symbol, x.reserve1)
-      )
-    );
-  });
-};
 
 const setup = async (data: ISetupProps) => {
   await deployments.fixture(["SushiFarmer"]);
