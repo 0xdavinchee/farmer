@@ -18,6 +18,7 @@ import {
   getPairAddress,
   getAndPrintPendingRewardBalance,
   maticTokenObject,
+  getAndPrintLPBurnMinAmounts,
 } from "./utils/helper";
 import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
 
@@ -28,12 +29,21 @@ describe("Polygon SushiFarmer Tests", function () {
   let WhaleSigner: SignerWithAddress;
   let ChainId: number;
 
-  const addLiquidityAndDeposit = async (whale: IUser, tokenAAmount: string, tokenBAmount: string) => {
+  const addLiquidityAndDeposit = async (
+    whale: IUser,
+    tokenAAmount: string,
+    tokenBAmount: string
+  ) => {
     const { MiniChef, IndependentToken, DependentToken, V2Pair } = whale;
     // get prior data from the mini chef
     const [initialStaked] = await MiniChef.userInfo(5, SushiFarmer.address);
 
-    await transferTokensToFarmer(whale, SushiFarmer.address, tokenAAmount, tokenBAmount);
+    await transferTokensToFarmer(
+      whale,
+      SushiFarmer.address,
+      tokenAAmount,
+      tokenBAmount
+    );
 
     const [independentTokenAmount, dependentTokenRequired] =
       await getLPTokenAmounts(
@@ -62,13 +72,21 @@ describe("Polygon SushiFarmer Tests", function () {
       },
       { gasLimit: 10000000 }
     );
-    
-    console.log("Independent Token Exchanged: ", format(independentTokenAmount));
+
+    console.log(
+      "Independent Token Exchanged: ",
+      format(independentTokenAmount)
+    );
     console.log("Dependent Token Exchanged: ", format(dependentTokenRequired));
-    
+
     const receipt = await txn.wait();
-    const lPDepositedSignature = ethers.utils.solidityKeccak256(["string"], ["LPDeposited(uint256,address,uint256)"]);
-    const logs = receipt.logs.filter(x => x.topics.includes(lPDepositedSignature));
+    const lPDepositedSignature = ethers.utils.solidityKeccak256(
+      ["string"],
+      ["LPDeposited(uint256,address,uint256)"]
+    );
+    const logs = receipt.logs.filter((x) =>
+      x.topics.includes(lPDepositedSignature)
+    );
     const lPDepositedData = logs[0].data;
     const iface = new ethers.utils.Interface(FarmerABI.abi);
     const decodedLogData = iface.decodeEventLog("LPDeposited", lPDepositedData);
@@ -124,7 +142,7 @@ describe("Polygon SushiFarmer Tests", function () {
       dependentToken: ADDRESS[ChainId].DAI,
       rewardTokenA: ADDRESS[ChainId].SUSHI,
       rewardTokenB: ADDRESS[ChainId].WMATIC,
-      chainId: ChainId
+      chainId: ChainId,
     });
     Whale = whale;
   });
@@ -174,7 +192,7 @@ describe("Polygon SushiFarmer Tests", function () {
       Whale.ComplexRewardTimer,
       5,
       SushiFarmer.address,
-      "Post Claimed Rewarrds"
+      "Post Claimed Rewards"
     );
   });
 
@@ -193,7 +211,6 @@ describe("Polygon SushiFarmer Tests", function () {
       .to.emit(Whale.MiniChef, "Withdraw")
       .withArgs(SushiFarmer.address, 5, staked, SushiFarmer.address);
 
-    // this for whatever reason is still 0, but I expect it to be equal to `staked`
     const lpBalanceAfterWithdraw = await Whale.V2Pair.balanceOf(Whale.address);
 
     // get final staked amount in the mini chef (should be 0)
@@ -289,7 +306,30 @@ describe("Polygon SushiFarmer Tests", function () {
     expect(formatStaked).to.be.greaterThan(formatInitialStaked);
   });
 
-  it("Should be able to swap LP tokens for underlying assets.", async function () {});
+  it("Should be able to swap LP tokens for underlying assets.", async function () {
+    // create LP and deposit, withdraw LP from mini chef to whale address
+    // check if the token value amounts match u
+    const staked = await addLiquidityAndDeposit(Whale, "1", "2000");
 
-  it("Should be able to swap specified amount of assets for one specified output asset.", async function () {});
+    // should be able to withdraw staked LP
+    await expect(
+      SushiFarmer.connect(WhaleSigner).withdrawLP(5, staked, {
+        gasLimit: 1000000,
+      })
+    )
+      .to.emit(Whale.MiniChef, "Withdraw")
+      .withArgs(SushiFarmer.address, 5, staked, SushiFarmer.address);
+
+    const [farmerLPBalance, amount0, amount1] =
+      await getAndPrintLPBurnMinAmounts(Whale, SushiFarmer.address);
+
+    await SushiFarmer.connect(WhaleSigner).removeLP(
+      Whale.IndependentToken.address,
+      Whale.DependentToken.address,
+      farmerLPBalance,
+      amount0,
+      amount1,
+      { gasLimit: 1000000 }
+    );
+  });
 });

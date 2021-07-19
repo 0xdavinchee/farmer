@@ -82,7 +82,7 @@ contract SushiFarmer is
             _tokenA,
             _tokenB
         );
-        IERC20(pair).approve(pair, _liquidity);
+        IERC20(pair).approve(address(router), _liquidity);
         (uint256 amountA, uint256 amountB) = router.removeLiquidity(
             _tokenA,
             _tokenB,
@@ -100,6 +100,12 @@ contract SushiFarmer is
         uint256 _amountTokensMin,
         uint256 _amountETHMin
     ) external override onlyOwner {
+        address pair = UniswapV2Library.pairFor(
+            router.factory(),
+            _token,
+            router.WETH()
+        );
+        IERC20(pair).approve(address(router), _liquidity);
         (uint256 amountToken, uint256 amountETH) = router.removeLiquidityETH(
             _token,
             _liquidity,
@@ -149,11 +155,17 @@ contract SushiFarmer is
         uint256 _amountTokensDesired,
         uint256 _amountETHMin,
         uint256 _slippage
-    ) public payable override returns (uint256) {
-        require(
-            msg.sender == address(this) || msg.sender == owner(),
-            "SushiFarmer: You dont have permission to call this function."
-        );
+    ) public onlyOwner payable override returns (uint256) {
+        return _getLPTokensETH(_token, _amountTokensDesired, _amountETHMin, _slippage);
+    }
+
+    function _getLPTokensETH(
+        address _token,
+        uint256 _amountTokensDesired,
+        uint256 _amountETHMin,
+        uint256 _slippage
+    ) internal returns (uint256) {
+        IERC20(_token).approve(address(router), _amountTokensDesired);
         uint256 amountTokenMin = _getMinAmount(_amountTokensDesired, _slippage);
         (uint256 amountToken, uint256 amountWETH, uint256 liquidity) = router
         .addLiquidityETH(

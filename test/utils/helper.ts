@@ -78,7 +78,8 @@ export const setup = async (data: ISetupProps) => {
   return setupObject;
 };
 
-export const format = (x: BigNumber) => Number(ethers.utils.formatUnits(x.toString()));
+export const format = (x: BigNumber) =>
+  Number(ethers.utils.formatUnits(x.toString()));
 
 /** Given an array of tokens, creates pairs of all of them. */
 export const pairs = (arr: Token[]) =>
@@ -348,4 +349,45 @@ export const getAndPrintPendingRewardBalance = async (
   console.log("\n");
 
   return [rewardAAmount, rewardBAmount[0]];
+};
+
+/**
+ * Gets the min amount of tokens to be expected in exchange for your
+ * liquidity.
+ * @param user 
+ * @param farmer 
+ * @returns 
+ */
+export const getAndPrintLPBurnMinAmounts = async (user: IUser, farmer: string) => {
+  const farmerLPBalance = await user.V2Pair.balanceOf(farmer);
+
+  const v2PairTotalSupply = await user.V2Pair.totalSupply();
+
+  const v2PairToken0Balance = await user.IndependentToken.balanceOf(
+    user.V2Pair.address
+  );
+  const v2PairToken1Balance = await user.DependentToken.balanceOf(
+    user.V2Pair.address
+  );
+  const v2PairLiquidity = await user.V2Pair.balanceOf(user.V2Pair.address);
+  const totalLiquidity = v2PairLiquidity.add(farmerLPBalance);
+
+  const amount0 = totalLiquidity
+    .mul(v2PairToken0Balance)
+    .div(v2PairTotalSupply);
+  const amount1 = totalLiquidity
+    .mul(v2PairToken1Balance)
+    .div(v2PairTotalSupply);
+
+  console.log(
+    "Exchanging " +
+      format(farmerLPBalance) +
+      " V2-LP tokens for " +
+      format(amount0) +
+      " of token A and " +
+      format(amount1) +
+      " of token B."
+  );
+
+  return [farmerLPBalance, amount0, amount1];
 };
