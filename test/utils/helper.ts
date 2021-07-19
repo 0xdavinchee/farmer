@@ -78,7 +78,7 @@ export const setup = async (data: ISetupProps) => {
   return setupObject;
 };
 
-export const format = (x: BigNumber) => ethers.utils.formatUnits(x.toString());
+export const format = (x: BigNumber) => Number(ethers.utils.formatUnits(x.toString()));
 
 /** Given an array of tokens, creates pairs of all of them. */
 export const pairs = (arr: Token[]) =>
@@ -190,11 +190,10 @@ export const getAutoCompoundData = (
   return data;
 };
 
-
 /**
  * Returns the pair address of two tokens.
- * @param independentToken 
- * @param dependentToken 
+ * @param independentToken
+ * @param dependentToken
  * @returns pair address.
  */
 export const getPairAddress = (
@@ -233,10 +232,10 @@ export const getPairAddress = (
 /**
  * Transfers tokens to the farmer contract so it
  * can start farming.
- * @param user 
- * @param farmer 
- * @param independentAmount 
- * @param dependentAmount 
+ * @param user
+ * @param farmer
+ * @param independentAmount
+ * @param dependentAmount
  */
 export const transferTokensToFarmer = async (
   user: IUser,
@@ -244,6 +243,7 @@ export const transferTokensToFarmer = async (
   independentAmount: string,
   dependentAmount: string
 ) => {
+  console.log("********** Transferring Tokens To Farmer Contract **********");
   // transfer funds to the sushi farmer contract
   await user.IndependentToken.transfer(
     farmer,
@@ -257,17 +257,17 @@ export const transferTokensToFarmer = async (
 
 /**
  * Given an independentToken and dependentToken,
- * this function computes the amount of dependentToken 
+ * this function computes the amount of dependentToken
  * needed given farmer's independent token balance. If
- * the amount of dependentToken is greater than the 
+ * the amount of dependentToken is greater than the
  * farmer's balance, we call this again with independent
  * and dependent token swapped.
- * @param independentToken 
- * @param dependentToken 
- * @param farmer 
- * @param v2Pair 
- * @param router 
- * @returns 
+ * @param independentToken
+ * @param dependentToken
+ * @param farmer
+ * @param v2Pair
+ * @param router
+ * @returns
  */
 export const getLPTokenAmounts = async (
   independentToken: IERC20,
@@ -291,7 +291,9 @@ export const getLPTokenAmounts = async (
   // if the dependent token required amount is greater than our balance of the dependent token
   // we will swap dependent token and independent token around so we can add LP.
   if (dependentTokenRequiredAmount > dependentTokenBalance) {
-    console.log("Dependent token amount required is greater than our dependent token balance.");
+    console.log(
+      "Dependent token amount required is greater than our dependent token balance."
+    );
     console.log("Attempting with dependent token as the independent token.");
     [independentTokenBalance, dependentTokenRequiredAmount] =
       await getLPTokenAmounts(
@@ -309,14 +311,15 @@ export const getLPTokenAmounts = async (
 /**
  * Prints reward token balance of user.
  * @param whale
+ * @param user
  */
 export const printRewardTokensBalance = async (whale: IUser, user: string) => {
   const rewardABalance = await whale.RewardTokenA.balanceOf(user);
   const rewardBBalance = await whale.RewardTokenB.balanceOf(user);
 
   console.log("********** Reward Balance **********");
-  console.log("rewardTokenA Balance: ", format(rewardABalance));
-  console.log("rewardTokenB Balance: ", format(rewardBBalance));
+  console.log("Reward A Balance: ", format(rewardABalance));
+  console.log("Reward B Balance: ", format(rewardBBalance));
 };
 
 /**
@@ -331,16 +334,18 @@ export const getAndPrintPendingRewardBalance = async (
   miniChef: IMiniChefV2,
   complexRewardTimer: IComplexRewardTimer,
   pid: number,
-  user: string
+  user: string,
+  time: string
 ) => {
   const rewardAAmount = await miniChef.pendingSushi(pid, user);
   const [rewardBAddresses, rewardBAmount] =
     await complexRewardTimer.pendingTokens(pid, user, 0);
 
-  console.log("********** Pending Reward Amounts **********");
-  console.log("rewardA Amount: ", format(rewardAAmount));
-  console.log("rewardB Address: ", rewardBAddresses[0]);
-  console.log("rewardB Amount: ", format(rewardBAmount[0]));
+  console.log("********** Pending Reward Amounts (" + time + ") **********");
+  console.log("Reward A Amount: ", format(rewardAAmount));
+  console.log("Reward B Address: ", rewardBAddresses[0]);
+  console.log("Reward B Amount: ", format(rewardBAmount[0]));
+  console.log("\n");
 
-  return { wMaticRewards: rewardBAmount[0], sushiRewards: rewardAAmount };
+  return [rewardAAmount, rewardBAmount[0]];
 };

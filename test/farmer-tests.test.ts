@@ -23,17 +23,15 @@ import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
 describe("Polygon SushiFarmer Tests", function () {
   let SushiRouter: IUniswapV2Router02;
   let SushiFarmer: SushiFarmer;
-  let whaleSigner: SignerWithAddress;
+  let Whale: IUser;
+  let WhaleSigner: SignerWithAddress;
 
-  const addLiquidityAndDeposit = async (whale: IUser) => {
+  const addLiquidityAndDeposit = async (whale: IUser, tokenAAmount: string, tokenBAmount: string) => {
     const { MiniChef, IndependentToken, DependentToken, V2Pair } = whale;
     // get prior data from the mini chef
-    const [priorStaked, priorTotalDebt] = await MiniChef.userInfo(
-      5,
-      SushiFarmer.address
-    );
+    const [initialStaked] = await MiniChef.userInfo(5, SushiFarmer.address);
 
-    await transferTokensToFarmer(whale, SushiFarmer.address, "1", "2000");
+    await transferTokensToFarmer(whale, SushiFarmer.address, tokenAAmount, tokenBAmount);
 
     const [independentTokenAmount, dependentTokenRequired] =
       await getLPTokenAmounts(
@@ -44,11 +42,14 @@ describe("Polygon SushiFarmer Tests", function () {
         SushiRouter
       );
 
-    const pair = getPairAddress(IndependentToken.address, DependentToken.address);
+    const pair = getPairAddress(
+      IndependentToken.address,
+      DependentToken.address
+    );
 
     // create a new LP via the sushi router then deposit the LP into
     // the mini chef farm for staking rewards
-    await SushiFarmer.connect(whaleSigner).createNewLPAndDeposit(
+    await SushiFarmer.connect(WhaleSigner).createNewLPAndDeposit(
       {
         pid: 5,
         amountADesired: independentTokenAmount,
@@ -61,17 +62,21 @@ describe("Polygon SushiFarmer Tests", function () {
     );
 
     // get our staked amount from the mini chef
-    const [staked, totalDebt] = await MiniChef.userInfo(5, SushiFarmer.address);
+    const [staked] = await MiniChef.userInfo(5, SushiFarmer.address);
 
-    // print outs
+    const formatInitialStaked = format(initialStaked);
+    const formatStaked = format(staked);
+
+    expect(formatStaked).to.be.greaterThan(formatInitialStaked);
+
     console.log(
-      "********** Added Liquidity and Deposited Into MiniChef **********"
+      "\n********** Adding Liquidity and Depositing LP Tokens Into MiniChef **********"
     );
-    console.log("priorStaked amount: ", format(priorStaked));
-    console.log("priorTotalDebt: ", format(priorTotalDebt));
-    console.log("staked amount: ", format(staked));
-    console.log("totalDebt: ", format(totalDebt));
-    return { staked, totalDebt };
+    console.log("Pre-Deposit Staked Amount: ", formatInitialStaked);
+    console.log("Post-Deposit Staked Amount: ", formatStaked);
+    console.log("\n");
+
+    return staked;
   };
 
   before(async () => {
@@ -93,11 +98,11 @@ describe("Polygon SushiFarmer Tests", function () {
       )) as IUniswapV2Router02),
       // whale is owner of sushifarmer
       await SushiFarmer.setOwner(whale);
-    whaleSigner = await ethers.getSigner(whale);
+    WhaleSigner = await ethers.getSigner(whale);
     console.log("SushiFarmer Addr: ", SushiFarmer.address);
   });
 
-  it("Should allow me to get my balances", async () => {
+  beforeEach(async () => {
     const { whale } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
@@ -105,152 +110,129 @@ describe("Polygon SushiFarmer Tests", function () {
       rewardTokenA: ADDRESS.SUSHI,
       rewardTokenB: ADDRESS.WMATIC,
     });
-    await printRewardTokensBalance(whale, whale.address);
+    Whale = whale;
+  });
+
+  it("Should allow me to get my balances", async () => {
+    await printRewardTokensBalance(Whale, Whale.address);
   });
 
   it("Should allow me to impersonate account and add liquidity and deposit.", async function () {
-    const { whale } = await setup({
-      pair: ADDRESS.WETH_DAI_SLP,
-      independentToken: ADDRESS.WETH,
-      dependentToken: ADDRESS.DAI,
-      rewardTokenA: ADDRESS.SUSHI,
-      rewardTokenB: ADDRESS.WMATIC,
-    });
-    await addLiquidityAndDeposit(whale);
+    await addLiquidityAndDeposit(Whale, "1", "2000");
   });
 
   it("Should be able to claim rewards.", async function () {
-    const { MiniChef, whale } = await setup({
-      pair: ADDRESS.WETH_DAI_SLP,
-      independentToken: ADDRESS.WETH,
-      dependentToken: ADDRESS.DAI,
-      rewardTokenA: ADDRESS.SUSHI,
-      rewardTokenB: ADDRESS.WMATIC,
-    });
+    console.log("\n********** Claiming Rewards From MiniChef **********");
+
+    await getAndPrintPendingRewardBalance(
+      Whale.MiniChef,
+      Whale.ComplexRewardTimer,
+      5,
+      SushiFarmer.address,
+      "Pre-Deposit and Stake"
+    );
 
     // add LP position and deposit into minichef
-    await addLiquidityAndDeposit(whale);
-
-    // get our pending sushi rewards
-    const rewardsInitial = await MiniChef.pendingSushi(5, SushiFarmer.address);
+    await addLiquidityAndDeposit(Whale, "1", "2000");
 
     // increase time and mine a new block
     await hre.network.provider.send("evm_increaseTime", [86400 * 30]);
     await hre.network.provider.send("evm_mine");
+
     // get our sushi rewards after some time
-    const rewardsFuture = await MiniChef.pendingSushi(5, SushiFarmer.address);
+    await getAndPrintPendingRewardBalance(
+      Whale.MiniChef,
+      Whale.ComplexRewardTimer,
+      5,
+      SushiFarmer.address,
+      "30 Days Post-Deposit and Stake"
+    );
 
     // harvest rewards
-    await SushiFarmer.connect(whaleSigner).claimRewards(5, {
+    await SushiFarmer.connect(WhaleSigner).claimRewards(5, {
       gasLimit: 10000000,
     });
 
-    const pendingRewardsAfterClaim = await MiniChef.pendingSushi(
+    await getAndPrintPendingRewardBalance(
+      Whale.MiniChef,
+      Whale.ComplexRewardTimer,
       5,
-      SushiFarmer.address
+      SushiFarmer.address,
+      "Post Claimed Rewarrds"
     );
-
-    console.log("\n********** Claimed Rewards From MiniChef **********");
-    console.log("rewardsInitial: ", format(rewardsInitial));
-    console.log("rewardsFuture: ", format(rewardsFuture));
-    console.log("pendingRewardsAfterClaim: ", format(pendingRewardsAfterClaim));
   });
 
   it("Should be able to remove LP position from contract and withdraw.", async function () {
-    const {
-      MiniChef,
-      V2Pair: WETH_DAI_SLP,
-      whale,
-    } = await setup({
-      pair: ADDRESS.WETH_DAI_SLP,
-      independentToken: ADDRESS.WETH,
-      dependentToken: ADDRESS.DAI,
-      rewardTokenA: ADDRESS.SUSHI,
-      rewardTokenB: ADDRESS.WMATIC,
-    });
-    // add LP position and deposit into minichef
-    const { staked } = await addLiquidityAndDeposit(whale);
+    const lpBalanceInitial = await Whale.V2Pair.balanceOf(Whale.address);
 
-    const lpBalanceInitial = await WETH_DAI_SLP.balanceOf(SushiRouter.address);
+    // add LP position and deposit into minichef
+    const staked = await addLiquidityAndDeposit(Whale, "1", "2000");
 
     // should be able to withdraw staked LP
     await expect(
-      SushiFarmer.connect(whaleSigner).withdrawLP(5, staked, {
+      SushiFarmer.connect(WhaleSigner).withdrawLP(5, staked, {
         gasLimit: 1000000,
       })
     )
-      .to.emit(MiniChef, "Withdraw")
+      .to.emit(Whale.MiniChef, "Withdraw")
       .withArgs(SushiFarmer.address, 5, staked, SushiFarmer.address);
 
     // this for whatever reason is still 0, but I expect it to be equal to `staked`
-    const lpBalanceAfterWithdraw = await WETH_DAI_SLP.balanceOf(
-      SushiRouter.address
-    );
+    const lpBalanceAfterWithdraw = await Whale.V2Pair.balanceOf(Whale.address);
 
     // get final staked amount in the mini chef (should be 0)
-    const [finalStaked, finalTotalDebt] = await MiniChef.userInfo(
+    const [finalStaked, finalTotalDebt] = await Whale.MiniChef.userInfo(
       5,
       SushiFarmer.address
     );
 
     // regardless of the console's this should be able to withdraw staked amount of LP
     await expect(
-      SushiFarmer.connect(whaleSigner).withdrawFunds(
-        WETH_DAI_SLP.address,
+      SushiFarmer.connect(WhaleSigner).withdrawFunds(
+        Whale.V2Pair.address,
         staked,
         {
           gasLimit: 1000000,
         }
       )
     )
-      .to.emit(WETH_DAI_SLP, "Transfer")
-      .withArgs(SushiFarmer.address, whale.address, staked);
+      .to.emit(Whale.V2Pair, "Transfer")
+      .withArgs(SushiFarmer.address, Whale.address, staked);
     console.log("\n********** Withdraw LP From MiniChef **********");
-    console.log("lpBalanceInitial: ", format(lpBalanceInitial));
-    console.log("lpBalanceAfterWithdraw: ", format(lpBalanceAfterWithdraw));
-    console.log("finalStaked amount: ", format(finalStaked));
-    console.log("finalTotalDebt: ", format(finalTotalDebt));
+    console.log("Initial LP Balance: ", format(lpBalanceInitial));
+    console.log(
+      "LP Balance After Withdrawal: ",
+      format(lpBalanceAfterWithdraw)
+    );
+    console.log("Final Staked Amount: ", format(finalStaked));
+    console.log("Final Total Debt Amount: ", format(finalTotalDebt));
   });
 
   it("Should be able to swap rewards for LP assets.", async function () {
-    const {
-      ComplexRewardTimer,
-      MiniChef,
-      V2Pair: WETH_DAI_SLP,
-      whale,
-    } = await setup({
-      pair: ADDRESS.WETH_DAI_SLP,
-      independentToken: ADDRESS.WETH,
-      dependentToken: ADDRESS.DAI,
-      rewardTokenA: ADDRESS.SUSHI,
-      rewardTokenB: ADDRESS.WMATIC,
-    });
-    console.log("\n********** Pre Deposit Rewards **********");
     // should console 0
     await getAndPrintPendingRewardBalance(
-      MiniChef,
-      ComplexRewardTimer,
+      Whale.MiniChef,
+      Whale.ComplexRewardTimer,
       5,
-      SushiFarmer.address
+      SushiFarmer.address,
+      "Pre-Deposit and Stake"
     );
 
     // add LP position and deposit into minichef
-    const { staked: priorStaked } = await addLiquidityAndDeposit(whale);
+    const initialStaked = await addLiquidityAndDeposit(Whale, "1", "2000");
 
     // increase time and mine a new block
     await hre.network.provider.send("evm_increaseTime", [86400 * 30]);
     await hre.network.provider.send("evm_mine");
 
-    console.log("\n********** Post Deposit + Time Passed Rewards **********");
-
     // should console more than 0
-    const { sushiRewards, wMaticRewards } =
-      await getAndPrintPendingRewardBalance(
-        MiniChef,
-        ComplexRewardTimer,
-        5,
-        SushiFarmer.address
-      );
+    const [sushiRewards, wMaticRewards] = await getAndPrintPendingRewardBalance(
+      Whale.MiniChef,
+      Whale.ComplexRewardTimer,
+      5,
+      SushiFarmer.address,
+      "30 Days Post-Deposit and Stake"
+    );
     const splitSushiRewards = sushiRewards.div(2);
     const splitWMaticRewards = wMaticRewards.div(2);
 
@@ -271,18 +253,24 @@ describe("Polygon SushiFarmer Tests", function () {
       ["WETH", "DAI"]
     );
 
-    await SushiFarmer.connect(whaleSigner).autoCompoundExistingLPPosition(
+    await SushiFarmer.connect(WhaleSigner).autoCompoundExistingLPPosition(
       5,
-      WETH_DAI_SLP.address,
+      Whale.V2Pair.address,
       data,
       { gasLimit: 1000000 }
     );
 
     // get our staked amount from the mini chef
-    const [staked] = await MiniChef.userInfo(5, SushiFarmer.address);
+    const [staked] = await Whale.MiniChef.userInfo(5, SushiFarmer.address);
+
+    const formatInitialStaked = format(initialStaked);
+    const formatStaked = format(staked);
+
     console.log("********** Autocompounded LP Position in MiniChef **********");
-    console.log("priorStaked amount: ", format(priorStaked));
-    console.log("compounded staked amount: ", format(staked)); // this should be greater than priorStaked amount
+    console.log("Prior Staked Amount: ", formatInitialStaked);
+    console.log("Autocompounded Staked Amount: ", formatStaked);
+
+    expect(formatStaked).to.be.greaterThan(formatInitialStaked);
   });
 
   it("Should be able to swap LP tokens for underlying assets.", async function () {});
