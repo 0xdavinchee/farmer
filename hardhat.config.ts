@@ -70,7 +70,7 @@ const config: HardhatUserConfig = {
     whale: WHALE_TEST_ADDRESS
   },
   mocha: {
-    timeout: 150000
+    timeout: 250000
   }
 };
 

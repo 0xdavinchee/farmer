@@ -1,9 +1,10 @@
 import { IUniswapV2Router02, SushiFarmer } from "../typechain";
 import hre, { ethers, deployments, getNamedAccounts } from "hardhat";
 import RouterABI from "@sushiswap/core/build/abi/IUniswapV2Router02.json";
+import FarmerABI from "../artifacts/contracts/SushiFarmer.sol/SushiFarmer.json";
 import { ADDRESS } from "./utils/constants";
 import { sushi } from "@lufycz/sushi-data";
-import { IExchangePair, ISetupProps, IUser } from "./utils/interfaces";
+import { IExchangePair, IUser } from "./utils/interfaces";
 import { expect } from "chai";
 import {
   createPairs,
@@ -25,6 +26,7 @@ describe("Polygon SushiFarmer Tests", function () {
   let SushiFarmer: SushiFarmer;
   let Whale: IUser;
   let WhaleSigner: SignerWithAddress;
+  let ChainId: number;
 
   const addLiquidityAndDeposit = async (whale: IUser, tokenAAmount: string, tokenBAmount: string) => {
     const { MiniChef, IndependentToken, DependentToken, V2Pair } = whale;
@@ -49,7 +51,7 @@ describe("Polygon SushiFarmer Tests", function () {
 
     // create a new LP via the sushi router then deposit the LP into
     // the mini chef farm for staking rewards
-    await SushiFarmer.connect(WhaleSigner).createNewLPAndDeposit(
+    const txn = await SushiFarmer.connect(WhaleSigner).createNewLPAndDeposit(
       {
         pid: 5,
         amountADesired: independentTokenAmount,
@@ -60,6 +62,17 @@ describe("Polygon SushiFarmer Tests", function () {
       },
       { gasLimit: 10000000 }
     );
+    
+    console.log("Independent Token Exchanged: ", format(independentTokenAmount));
+    console.log("Dependent Token Exchanged: ", format(dependentTokenRequired));
+    
+    const receipt = await txn.wait();
+    const lPDepositedSignature = ethers.utils.solidityKeccak256(["string"], ["LPDeposited(uint256,address,uint256)"]);
+    const logs = receipt.logs.filter(x => x.topics.includes(lPDepositedSignature));
+    const lPDepositedData = logs[0].data;
+    const iface = new ethers.utils.Interface(FarmerABI.abi);
+    const decodedLogData = iface.decodeEventLog("LPDeposited", lPDepositedData);
+    console.log("Liquidity Received: ", format(decodedLogData["amount"]));
 
     // get our staked amount from the mini chef
     const [staked] = await MiniChef.userInfo(5, SushiFarmer.address);
@@ -81,6 +94,8 @@ describe("Polygon SushiFarmer Tests", function () {
 
   before(async () => {
     await deployments.fixture(["SushiFarmer"]);
+    const { chainId } = await ethers.provider.getNetwork();
+    ChainId = 137; // chainId;
     const { whale } = await getNamedAccounts();
 
     // impersonate the whale
@@ -94,7 +109,7 @@ describe("Polygon SushiFarmer Tests", function () {
     )) as unknown as SushiFarmer),
       (SushiRouter = (await ethers.getContractAt(
         RouterABI,
-        ADDRESS.SUSHI_ROUTER
+        ADDRESS[ChainId].SUSHI_ROUTER
       )) as IUniswapV2Router02),
       // whale is owner of sushifarmer
       await SushiFarmer.setOwner(whale);
@@ -104,11 +119,12 @@ describe("Polygon SushiFarmer Tests", function () {
 
   beforeEach(async () => {
     const { whale } = await setup({
-      pair: ADDRESS.WETH_DAI_SLP,
-      independentToken: ADDRESS.WETH,
-      dependentToken: ADDRESS.DAI,
-      rewardTokenA: ADDRESS.SUSHI,
-      rewardTokenB: ADDRESS.WMATIC,
+      pair: ADDRESS[ChainId].WETH_DAI_SLP,
+      independentToken: ADDRESS[ChainId].WETH,
+      dependentToken: ADDRESS[ChainId].DAI,
+      rewardTokenA: ADDRESS[ChainId].SUSHI,
+      rewardTokenB: ADDRESS[ChainId].WMATIC,
+      chainId: ChainId
     });
     Whale = whale;
   });

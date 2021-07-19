@@ -1,4 +1,6 @@
-export const POOLS = [
+import { ChainId } from "@sushiswap/sdk";
+
+export const MATIC_POOLS = [
   {
     accSushiPerShare: "15655082994441",
     allocPoint: "10",
@@ -133,15 +135,17 @@ export const POOLS = [
   },
 ];
 
-export const ADDRESS = {
-  COMPLEX_REWARD_TIMER: "0xa3378Ca78633B3b9b2255EAa26748770211163AE",
-  SUSHI: "0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a",
-  WMATIC: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-  DAI: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
-  WETH: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
-  WETH_DAI_SLP: "0x6ff62bfb8c12109e8000935a6de54dad83a4f39f",
-  SUSHI_ROUTER: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
-  MINI_CHEF: process.env.MINI_CHEF_V2_ADDRESS || "",
-  USER: process.env.USER_ADDRESS || "",
-  WHALE_TEST: process.env.WHALE_TEST_ADDRESS || "",
+export const ADDRESS: { [chainId: number]: { [key: string]: string}} = {
+  [ChainId.MATIC]: {
+    COMPLEX_REWARD_TIMER: "0xa3378Ca78633B3b9b2255EAa26748770211163AE",
+    SUSHI: "0x0b3F868E0BE5597D5DB7fEB59E1CADBb0fdDa50a",
+    WMATIC: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    DAI: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+    WETH: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+    WETH_DAI_SLP: "0x6ff62bfb8c12109e8000935a6de54dad83a4f39f",
+    SUSHI_ROUTER: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+    MINI_CHEF: process.env.MINI_CHEF_V2_ADDRESS || "",
+    USER: process.env.USER_ADDRESS || "",
+    WHALE_TEST: process.env.WHALE_TEST_ADDRESS || "",
+  }
 };

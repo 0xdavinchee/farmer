@@ -40,11 +40,11 @@ export const setup = async (data: ISetupProps) => {
     // these contracts will always have the same addresses
     ComplexRewardTimer: (await ethers.getContractAt(
       ComplexRewardTimerABI,
-      ADDRESS.COMPLEX_REWARD_TIMER
+      ADDRESS[data.chainId].COMPLEX_REWARD_TIMER
     )) as IComplexRewardTimer,
     MiniChef: (await ethers.getContractAt(
       ChefABI,
-      ADDRESS.MINI_CHEF
+      ADDRESS[data.chainId].MINI_CHEF
     )) as IMiniChefV2,
 
     // reward tokens

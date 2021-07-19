@@ -52,6 +52,7 @@ export interface ISetupProps {
   dependentToken: string;
   rewardTokenA: string;
   rewardTokenB: string;
+  chainId: number;
 }
 
 export interface ITokenObject {
