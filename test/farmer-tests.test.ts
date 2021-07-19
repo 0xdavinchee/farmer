@@ -1,204 +1,78 @@
-import {
-  IComplexRewardTimer,
-  IERC20,
-  IMiniChefV2,
-  IUniswapV2Pair,
-  IUniswapV2Router02,
-  SushiFarmer,
-} from "../typechain";
+import { IUniswapV2Router02, SushiFarmer } from "../typechain";
 import hre, { ethers, deployments, getNamedAccounts } from "hardhat";
-import ChefABI from "./abi/MiniChef.json";
-import ComplexRewardTimerABI from "./abi/ComplexRewardTimer.json";
 import RouterABI from "@sushiswap/core/build/abi/IUniswapV2Router02.json";
-import PairABI from "@sushiswap/core/build/abi/IUniswapV2Pair.json";
-import ERC20ABI from "@sushiswap/core/build/abi/ERC20.json";
-import { tokens } from "@sushiswap/default-token-list/build/sushiswap-default.tokenlist.json";
-import {
-  ChainId,
-  computePairAddress,
-  FACTORY_ADDRESS,
-  Token,
-} from "@sushiswap/sdk";
-import { setupUser } from "./utils";
 import { ADDRESS } from "./utils/constants";
 import { sushi } from "@lufycz/sushi-data";
-import {
-  IBaseTestObject,
-  IExchangePair,
-  ISetupProps,
-} from "./utils/interfaces";
+import { IExchangePair, ISetupProps, IUser } from "./utils/interfaces";
 import { expect } from "chai";
 import {
   createPairs,
   format,
   getAutoCompoundData,
+  printRewardTokensBalance,
   pairAddresses,
+  setup,
+  transferTokensToFarmer,
+  getLPTokenAmounts,
+  getPairAddress,
+  getAndPrintPendingRewardBalance,
+  maticTokenObject,
 } from "./utils/helper";
 import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
 
-// TODO: Move helper functions to helper file
-// TODO: Ensure that tokens are sorted in correct order before passing to contracts
-
-const setup = async (data: ISetupProps) => {
-  const { deployer, whale } = await getNamedAccounts();
-  const { pair, independentToken, dependentToken } = data;
-
-  const contracts = {
-    // these contracts will always have the same addresses
-    ComplexRewardTimer: (await ethers.getContractAt(
-      ComplexRewardTimerABI,
-      ADDRESS.COMPLEX_REWARD_TIMER
-    )) as IComplexRewardTimer,
-    MiniChef: (await ethers.getContractAt(
-      ChefABI,
-      ADDRESS.MINI_CHEF
-    )) as IMiniChefV2,
-
-    // reward tokens
-    Sushi: (await ethers.getContractAt(ERC20ABI, ADDRESS.SUSHI)) as IERC20,
-    WMATIC: (await ethers.getContractAt(ERC20ABI, ADDRESS.WMATIC)) as IERC20,
-
-    // these contract addresses will vary
-    V2Pair: (await ethers.getContractAt(PairABI, pair)) as IUniswapV2Pair,
-    IndependentToken: (await ethers.getContractAt(
-      ERC20ABI,
-      independentToken
-    )) as IERC20,
-    DependentToken: (await ethers.getContractAt(
-      ERC20ABI,
-      dependentToken
-    )) as IERC20,
-  };
-
-  const setupObject = {
-    ...contracts,
-    deployer: await setupUser(deployer, contracts),
-    whale: await setupUser(whale, contracts),
-  };
-
-  return setupObject;
-};
-
-const addLiquidityAndDeposit = async (
-  baseObject: IBaseTestObject,
-  independentToken: IERC20,
-  dependentToken: IERC20,
-  v2Pair: IUniswapV2Pair,
-  SushiFarmer: SushiFarmer,
-  whaleSigner: SignerWithAddress
-) => {
-  const { farmer, whale, router, miniChef } = baseObject;
-
-  // transfer funds to the sushi farmer contract
-  await whale.IndependentToken.transfer(
-    farmer.address,
-    ethers.utils.parseUnits("1")
-  );
-  await whale.DependentToken.transfer(
-    farmer.address,
-    ethers.utils.parseUnits("2000")
-  );
-
-  // get our weth balance
-  const primaryTokenBalance = await independentToken.balanceOf(farmer.address);
-
-  // given our weth balance, how much dai do we need to LP?
-  const [reservesA, reservesB] = await v2Pair.getReserves(); // WETH | DAI
-  const dependentTokeRequired = await router.quote(
-    primaryTokenBalance,
-    reservesA,
-    reservesB
-  );
-
-  const tokenListA = tokens.find(
-    (x) => x.address.toUpperCase() === independentToken.address.toUpperCase()
-  )!;
-  const tokenListB = tokens.find(
-    (x) => x.address.toUpperCase() === dependentToken.address.toUpperCase()
-  )!;
-
-  const tokenA = new Token(
-    ChainId.MATIC,
-    independentToken.address,
-    tokenListA.decimals,
-    tokenListA.symbol,
-    tokenListA.name
-  );
-  const tokenB = new Token(
-    ChainId.MATIC,
-    dependentToken.address,
-    tokenListB.decimals,
-    tokenListB.symbol,
-    tokenListB.name
-  );
-
-  const pair = computePairAddress({
-    factoryAddress: FACTORY_ADDRESS[ChainId.MATIC],
-    tokenA,
-    tokenB,
-  });
-
-  // get prior data from the mini chef
-  const [priorStaked, priorTotalDebt] = await miniChef.userInfo(
-    5,
-    farmer.address
-  );
-
-  // create a new LP via the sushi router then deposit the LP into
-  // the mini chef farm for staking rewards
-  await SushiFarmer.connect(whaleSigner).createNewLPAndDeposit(
-    {
-      pid: 5,
-      amountADesired: primaryTokenBalance,
-      amountBDesired: dependentTokeRequired,
-      pair,
-      tokenA: independentToken.address,
-      tokenB: dependentToken.address,
-    },
-    { gasLimit: 10000000 }
-  );
-
-  // get our staked amount from the mini chef
-  const [staked, totalDebt] = await miniChef.userInfo(5, farmer.address);
-
-  // print outs
-  console.log(
-    "********** Added Liquidity and Deposited Into MiniChef **********"
-  );
-  console.log("priorStaked amount: ", format(priorStaked));
-  console.log("priorTotalDebt: ", format(priorTotalDebt));
-  console.log("staked amount: ", format(staked));
-  console.log("totalDebt: ", format(totalDebt));
-  return { staked, totalDebt };
-};
-
-const getContractRewardTokensBalance = async (whale: any) => {
-  const wMaticBalance = await whale.WMATIC.balanceOf(ADDRESS.USER);
-  const sushiBalance = await whale.Sushi.balanceOf(ADDRESS.USER);
-  console.log("wMaticBalance", format(wMaticBalance));
-  console.log("sushiBalance", format(sushiBalance));
-};
-
-const getPendingRewardBalance = async (
-  miniChef: IMiniChefV2,
-  complexRewardTimer: IComplexRewardTimer,
-  pid: number,
-  user: string
-) => {
-  const [wMaticRewardsAddresses, wMaticRewards] =
-    await complexRewardTimer.pendingTokens(pid, user, 0);
-  const sushiRewards = await miniChef.pendingSushi(pid, user);
-  console.log("wMaticRewardsAddresses", wMaticRewardsAddresses);
-  console.log("wMaticRewards", format(wMaticRewards[0]));
-  console.log("sushiRewards", format(sushiRewards));
-
-  return { wMaticRewards: wMaticRewards[0], sushiRewards };
-};
-
-describe("SushiFarmer Tests", function () {
+describe("Polygon SushiFarmer Tests", function () {
   let SushiRouter: IUniswapV2Router02;
   let SushiFarmer: SushiFarmer;
   let whaleSigner: SignerWithAddress;
+
+  const addLiquidityAndDeposit = async (whale: IUser) => {
+    const { MiniChef, IndependentToken, DependentToken, V2Pair } = whale;
+    // get prior data from the mini chef
+    const [priorStaked, priorTotalDebt] = await MiniChef.userInfo(
+      5,
+      SushiFarmer.address
+    );
+
+    await transferTokensToFarmer(whale, SushiFarmer.address, "1", "2000");
+
+    const [independentTokenAmount, dependentTokenRequired] =
+      await getLPTokenAmounts(
+        IndependentToken,
+        DependentToken,
+        SushiFarmer.address,
+        V2Pair,
+        SushiRouter
+      );
+
+    const pair = getPairAddress(IndependentToken.address, DependentToken.address);
+
+    // create a new LP via the sushi router then deposit the LP into
+    // the mini chef farm for staking rewards
+    await SushiFarmer.connect(whaleSigner).createNewLPAndDeposit(
+      {
+        pid: 5,
+        amountADesired: independentTokenAmount,
+        amountBDesired: dependentTokenRequired,
+        pair,
+        tokenA: IndependentToken.address,
+        tokenB: DependentToken.address,
+      },
+      { gasLimit: 10000000 }
+    );
+
+    // get our staked amount from the mini chef
+    const [staked, totalDebt] = await MiniChef.userInfo(5, SushiFarmer.address);
+
+    // print outs
+    console.log(
+      "********** Added Liquidity and Deposited Into MiniChef **********"
+    );
+    console.log("priorStaked amount: ", format(priorStaked));
+    console.log("priorTotalDebt: ", format(priorTotalDebt));
+    console.log("staked amount: ", format(staked));
+    console.log("totalDebt: ", format(totalDebt));
+    return { staked, totalDebt };
+  };
 
   before(async () => {
     await deployments.fixture(["SushiFarmer"]);
@@ -223,71 +97,39 @@ describe("SushiFarmer Tests", function () {
     console.log("SushiFarmer Addr: ", SushiFarmer.address);
   });
 
-  it.skip("Should allow me to get my balances", async () => {
+  it("Should allow me to get my balances", async () => {
     const { whale } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
       dependentToken: ADDRESS.DAI,
+      rewardTokenA: ADDRESS.SUSHI,
+      rewardTokenB: ADDRESS.WMATIC,
     });
-    await getContractRewardTokensBalance(whale);
+    await printRewardTokensBalance(whale, whale.address);
   });
 
-  it.skip("Should allow me to impersonate account and add liquidity and deposit.", async function () {
-    const {
-      MiniChef,
-      IndependentToken: WETH,
-      DependentToken: DAI,
-      V2Pair: WETH_DAI_SLP,
-      whale,
-    } = await setup({
+  it("Should allow me to impersonate account and add liquidity and deposit.", async function () {
+    const { whale } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
       dependentToken: ADDRESS.DAI,
+      rewardTokenA: ADDRESS.SUSHI,
+      rewardTokenB: ADDRESS.WMATIC,
     });
-    const baseObject: IBaseTestObject = {
-      farmer: SushiFarmer,
-      miniChef: MiniChef,
-      router: SushiRouter,
-      whale,
-    };
-    await addLiquidityAndDeposit(
-      baseObject,
-      WETH,
-      DAI,
-      WETH_DAI_SLP,
-      SushiFarmer,
-      whaleSigner
-    );
+    await addLiquidityAndDeposit(whale);
   });
 
-  it.skip("Should be able to claim rewards.", async function () {
-    const {
-      MiniChef,
-      IndependentToken: WETH,
-      DependentToken: DAI,
-      V2Pair: WETH_DAI_SLP,
-      whale,
-    } = await setup({
+  it("Should be able to claim rewards.", async function () {
+    const { MiniChef, whale } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
       dependentToken: ADDRESS.DAI,
+      rewardTokenA: ADDRESS.SUSHI,
+      rewardTokenB: ADDRESS.WMATIC,
     });
 
-    const baseObject: IBaseTestObject = {
-      farmer: SushiFarmer,
-      miniChef: MiniChef,
-      router: SushiRouter,
-      whale,
-    };
     // add LP position and deposit into minichef
-    await addLiquidityAndDeposit(
-      baseObject,
-      WETH,
-      DAI,
-      WETH_DAI_SLP,
-      SushiFarmer,
-      whaleSigner
-    );
+    await addLiquidityAndDeposit(whale);
 
     // get our pending sushi rewards
     const rewardsInitial = await MiniChef.pendingSushi(5, SushiFarmer.address);
@@ -314,34 +156,20 @@ describe("SushiFarmer Tests", function () {
     console.log("pendingRewardsAfterClaim: ", format(pendingRewardsAfterClaim));
   });
 
-  it.skip("Should be able to remove LP position from contract and withdraw.", async function () {
+  it("Should be able to remove LP position from contract and withdraw.", async function () {
     const {
       MiniChef,
-      IndependentToken: WETH,
-      DependentToken: DAI,
       V2Pair: WETH_DAI_SLP,
       whale,
     } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
       dependentToken: ADDRESS.DAI,
+      rewardTokenA: ADDRESS.SUSHI,
+      rewardTokenB: ADDRESS.WMATIC,
     });
-
-    const baseObject: IBaseTestObject = {
-      farmer: SushiFarmer,
-      miniChef: MiniChef,
-      router: SushiRouter,
-      whale,
-    };
     // add LP position and deposit into minichef
-    const { staked } = await addLiquidityAndDeposit(
-      baseObject,
-      WETH,
-      DAI,
-      WETH_DAI_SLP,
-      SushiFarmer,
-      whaleSigner
-    );
+    const { staked } = await addLiquidityAndDeposit(whale);
 
     const lpBalanceInitial = await WETH_DAI_SLP.balanceOf(SushiRouter.address);
 
@@ -388,26 +216,18 @@ describe("SushiFarmer Tests", function () {
     const {
       ComplexRewardTimer,
       MiniChef,
-      IndependentToken: WETH,
-      DependentToken: DAI,
       V2Pair: WETH_DAI_SLP,
       whale,
     } = await setup({
       pair: ADDRESS.WETH_DAI_SLP,
       independentToken: ADDRESS.WETH,
       dependentToken: ADDRESS.DAI,
+      rewardTokenA: ADDRESS.SUSHI,
+      rewardTokenB: ADDRESS.WMATIC,
     });
-
-    const baseObject: IBaseTestObject = {
-      farmer: SushiFarmer,
-      miniChef: MiniChef,
-      router: SushiRouter,
-      whale,
-    };
-
     console.log("\n********** Pre Deposit Rewards **********");
     // should console 0
-    await getPendingRewardBalance(
+    await getAndPrintPendingRewardBalance(
       MiniChef,
       ComplexRewardTimer,
       5,
@@ -415,14 +235,7 @@ describe("SushiFarmer Tests", function () {
     );
 
     // add LP position and deposit into minichef
-    const { staked: priorStaked } = await addLiquidityAndDeposit(
-      baseObject,
-      WETH,
-      DAI,
-      WETH_DAI_SLP,
-      SushiFarmer,
-      whaleSigner
-    );
+    const { staked: priorStaked } = await addLiquidityAndDeposit(whale);
 
     // increase time and mine a new block
     await hre.network.provider.send("evm_increaseTime", [86400 * 30]);
@@ -431,12 +244,13 @@ describe("SushiFarmer Tests", function () {
     console.log("\n********** Post Deposit + Time Passed Rewards **********");
 
     // should console more than 0
-    const { sushiRewards, wMaticRewards } = await getPendingRewardBalance(
-      MiniChef,
-      ComplexRewardTimer,
-      5,
-      SushiFarmer.address
-    );
+    const { sushiRewards, wMaticRewards } =
+      await getAndPrintPendingRewardBalance(
+        MiniChef,
+        ComplexRewardTimer,
+        5,
+        SushiFarmer.address
+      );
     const splitSushiRewards = sushiRewards.div(2);
     const splitWMaticRewards = wMaticRewards.div(2);
 
@@ -448,7 +262,7 @@ describe("SushiFarmer Tests", function () {
       addresses: pairAddresses, // pair addresses (base tokens)
     });
 
-    const pairs = createPairs(basePairs);
+    const pairs = createPairs(basePairs, maticTokenObject);
 
     const data = getAutoCompoundData(
       pairs,

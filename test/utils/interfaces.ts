@@ -1,3 +1,4 @@
+import { Token } from "@sushiswap/sdk";
 import {
   IComplexRewardTimer,
   IERC20,
@@ -34,25 +35,25 @@ export interface IExchangeToken {
   derivedETH: number;
 }
 
-export interface IBaseTestObject {
-  farmer: SushiFarmer;
-  miniChef: IMiniChefV2;
-  router: IUniswapV2Router02;
-  whale: {
-    address: string;
-  } & {
-    ComplexRewardTimer: IComplexRewardTimer;
-    MiniChef: IMiniChefV2;
-    Sushi: IERC20;
-    WMATIC: IERC20;
-    V2Pair: IUniswapV2Pair;
-    IndependentToken: IERC20;
-    DependentToken: IERC20;
-  };
+export interface IUser {
+  address: string;
+  ComplexRewardTimer: IComplexRewardTimer;
+  MiniChef: IMiniChefV2;
+  RewardTokenA: IERC20;
+  RewardTokenB: IERC20;
+  V2Pair: IUniswapV2Pair;
+  IndependentToken: IERC20;
+  DependentToken: IERC20;
 }
 
 export interface ISetupProps {
   pair: string;
   independentToken: string;
   dependentToken: string;
+  rewardTokenA: string;
+  rewardTokenB: string;
+}
+
+export interface ITokenObject {
+  [symbol: string]: Token;
 }
