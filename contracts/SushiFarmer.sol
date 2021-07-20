@@ -266,6 +266,9 @@ contract SushiFarmer is
             data.tokenBPath
         );
     }
+    receive() external payable {
+
+    }
 
     function _swapExactRewardsForTokens(
         uint256 _splitRewardsBalance,
