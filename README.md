@@ -25,13 +25,15 @@
 
   <p align="center">
     The client side for interacting with the farmer contracts. Some of the features that I currently have in mind and want to build include:
-    - Multiple chain/network functionality.
-    - Multiple protocol functionality (start with Sushi) - then go to other clones (Quickswap)
-    - Seeing the available farms on the protocol + info about the APR/APY, etc.
-    - Creating a LP and depositing it into a farm via the farmer contract
-    - Seeing the different LP positions you have (and their value)
-    - Removing a staked LP position 
-    - Removing a staked LP position, trading it in for its underlying assets and withdrawing it to the owner of the contract
+    <ul>
+      <li>Multiple chain/network functionality.</li>
+      <li>Multiple protocol functionality (start with Sushi) - then go to other clones (Quickswap)</li>
+      <li>Seeing the available farms on the protocol + info about the APR/APY, etc.</li>
+      <li>Creating a LP and depositing it into a farm via the farmer contract</li>
+      <li>Seeing the different LP positions you have (and their value)</li>
+      <li>Removing a staked LP position</li>
+      <li>Removing a staked LP position, trading it in for its underlying assets and withdrawing it to the owner of the contract</li>
+    </ul>
     <br />
     <a href="https://github.com/0xdavinchee/farmer-frontend"><strong>Explore the docs »</strong></a>
     <br />
