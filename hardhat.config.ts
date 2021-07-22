@@ -16,20 +16,27 @@ const chainIds = {
   mainnet: 1,
   rinkeby: 4,
   ropsten: 3,
-  "polygon-mainnet": 137,
+  polygon: 137,
+  harmony: 1666600000,
 };
 
 const INFURA_API_KEY = process.env.INFURA_API_KEY || "";
 const TEST_ACCOUNT = process.env.TEST_ACCOUNT || "";
 const WHALE_TEST_ADDRESS = process.env.WHALE_TEST_ADDRESS || "";
 
-const createUrl = (network: keyof typeof chainIds) =>
+const createUrl = (network: string) =>
   "https://" + network + ".infura.io/v3/" + INFURA_API_KEY;
 
+const layerTwoUrlMap = new Map([
+  ["harmony", "https://api.s0.t.hmny.io"],
+  ["polygon", createUrl("polygon-mainnet")],
+]);
+
 const createTestnetConfig = (
-  network: keyof typeof chainIds
+  network: keyof typeof chainIds,
+  isLayerTwo?: boolean
 ): NetworkUserConfig => {
-  const url = createUrl(network);
+  const url = isLayerTwo ? layerTwoUrlMap.get(network) : createUrl(network);
   return {
     accounts: [TEST_ACCOUNT],
     chainId: chainIds[network],
@@ -63,15 +70,16 @@ const config: HardhatUserConfig = {
     kovan: createTestnetConfig("kovan"),
     rinkeby: createTestnetConfig("rinkeby"),
     ropsten: createTestnetConfig("ropsten"),
-    matic: createTestnetConfig("polygon-mainnet"),
+    matic: createTestnetConfig("polygon"),
+    harmony: createTestnetConfig("harmony"),
   },
   namedAccounts: {
     deployer: 0,
-    whale: WHALE_TEST_ADDRESS
+    whale: WHALE_TEST_ADDRESS,
   },
   mocha: {
-    timeout: 250000
-  }
+    timeout: 250000,
+  },
 };
 
 export default config;

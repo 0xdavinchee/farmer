@@ -7,7 +7,7 @@ import {
   Token,
   Trade,
 } from "@sushiswap/sdk";
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { ethers, getNamedAccounts } from "hardhat";
 import ChefABI from "../abi/MiniChef.json";
 import ComplexRewardTimerABI from "../abi/ComplexRewardTimer.json";
@@ -24,6 +24,8 @@ import {
 } from "../../typechain";
 import { ADDRESS } from "./constants";
 import { setupUser } from ".";
+
+// TODO: anywhere using formatUnits or parseUnits MUST take into consideration decimals.
 
 /**
  * This function sets up the contracts by getting all the necessary stateful contracts
@@ -115,7 +117,7 @@ export const pairAddresses = maticPairs.map(([tokenA, tokenB]) => {
  */
 export const tokenToObject = (arr: Token[]) =>
   arr.reduce((x, y) => {
-    x[y.symbol as string] = y;
+    x[y.symbol as string] = y; // TODO: key should be address.toUppercase()
     return x;
   }, {} as any);
 
@@ -123,8 +125,13 @@ export const maticTokenObject: { [symbol: string]: Token } =
   tokenToObject(maticTokens);
 
 /** Parse the units given the decimals.*/
-export const parseUnits = (symbol: string, value: number, decimals: number) =>
-  ethers.utils.parseUnits(value.toString(), decimals).toString();
+export const parseUnits = (
+  address: string,
+  value: number,
+  decimals: number
+) => {
+  return ethers.utils.parseUnits(value.toString(), decimals).toString();
+};
 
 /** Given a list of exchange pairs from the sushi-data endpoint,
  * returns a list of pair objects.
@@ -159,8 +166,9 @@ export const getAutoCompoundData = (
   pairs: Pair[],
   splitSushiRewards: BigNumber,
   splitWMaticRewards: BigNumber,
-  tokenSymbols: string[]
+  tokenSymbols: string[] // TODO: this must be tokenAddresses
 ) => {
+  // TODO: symbol must be address
   const rewardTokenData = [
     { symbol: "SUSHI", rewards: splitSushiRewards },
     { symbol: "WMATIC", rewards: splitWMaticRewards },
@@ -172,6 +180,21 @@ export const getAutoCompoundData = (
       tokenBPath: string[];
     } = { tokenAPath: [], tokenBPath: [] };
     for (let j = 0; j < tokenSymbols.length; j++) {
+      // if the reward token is the same as the underlying token
+      // set the path w/ two elements, same address
+      if (rewardTokenData[i].symbol === tokenSymbols[j]) {
+        // TODO: we should be passing addresses in here, not .symbol
+        object.tokenAPath.length === 0
+          ? (object.tokenAPath = [
+              rewardTokenData[i].symbol,
+              rewardTokenData[i].symbol,
+            ])
+          : (object.tokenBPath = [
+              rewardTokenData[i].symbol,
+              rewardTokenData[i].symbol,
+            ]);
+        continue;
+      }
       // get the best trade given an exact input
       const rewardTokenToTokenTrade = Trade.bestTradeExactIn(
         pairs,
@@ -229,7 +252,6 @@ export const getPairAddress = (
     tokenB,
   });
 };
-
 /**
  * Transfers tokens to the farmer contract so it
  * can start farming.
@@ -324,6 +346,20 @@ export const printRewardTokensBalance = async (whale: IUser, user: string) => {
 };
 
 /**
+ * Prints token(s) balance of user.
+ * @param whale
+ * @param user
+ */
+export const printTokensBalance = async (whale: IUser, user: string) => {
+  const independentTokenBalance = await whale.IndependentToken.balanceOf(user);
+  const dependentTokenBalance = await whale.DependentToken.balanceOf(user);
+
+  console.log("********** Tokens Balance **********");
+  console.log("Independent Token Balance: ", format(independentTokenBalance));
+  console.log("Dependent Token Balance: ", format(dependentTokenBalance));
+};
+
+/**
  * Gets and prints the pending reward balance amount.
  * @param miniChef
  * @param complexRewardTimer
@@ -354,11 +390,14 @@ export const getAndPrintPendingRewardBalance = async (
 /**
  * Gets the min amount of tokens to be expected in exchange for your
  * liquidity.
- * @param user 
- * @param farmer 
- * @returns 
+ * @param user
+ * @param farmer
+ * @returns
  */
-export const getAndPrintLPBurnMinAmounts = async (user: IUser, farmer: string) => {
+export const getAndPrintLPBurnMinAmounts = async (
+  user: IUser,
+  farmer: string
+) => {
   const farmerLPBalance = await user.V2Pair.balanceOf(farmer);
 
   const v2PairTotalSupply = await user.V2Pair.totalSupply();

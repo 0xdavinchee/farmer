@@ -9,13 +9,23 @@ import {UniswapV2Library} from "@sushiswap/core/contracts/uniswapv2/libraries/Un
 import {IMiniChefV2} from "./interfaces/IMiniChefV2.sol";
 import {Farmer} from "./Farmer.sol";
 
+/// @title SushiFarmer is a contract which helps with managing a farming position on 
+/// Sushiswap. Its main purpose is to automate compounding of your positions. That is,
+/// taking the reward(s) earned through staking and swapping these for the underlying
+/// assets of your LP position and swapping these for more LP tokens and compounding 
+/// your position.
+/// @author 0xdavinchee
 contract SushiFarmer is
     Farmer(IUniswapV2Router02(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506))
 {
     IMiniChefV2 public chef;
+    IERC20 public rewardTokenA;
+    IERC20 public rewardTokenB;
 
-    constructor(IMiniChefV2 _chef) public {
+    constructor(IMiniChefV2 _chef, IERC20 _rewardTokenA, IERC20 _rewardTokenB) public {
         chef = _chef;
+        rewardTokenA = _rewardTokenA;
+        rewardTokenB = _rewardTokenB;
     }
 
     event LPDeposited(uint256 pid, address pair, uint256 amount);
@@ -54,15 +64,21 @@ contract SushiFarmer is
         (address token0, address token1) = UniswapV2Library.sortTokens(tokenA, tokenB);
         (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(_pair).getReserves();
 
-        uint256 amountB = router.quote(IERC20(token0).balanceOf(address(this)), reserve0, reserve1);
+        uint256 amount0 = IERC20(token0).balanceOf(address(this));
+        uint256 amount1 = router.quote(amount0, reserve0, reserve1);
+        uint256 token1Balance = IERC20(token1).balanceOf(address(this));
+        if (amount1 > token1Balance) {
+            amount1 = token1Balance;
+            amount0 = router.quote(amount1, reserve1, reserve0);
+        }
 
         CreateLPData memory data;
         data.pid = _pid;
         data.pair = _pair;
         data.tokenA = token0;
         data.tokenB = token1;
-        data.amountADesired = IERC20(token0).balanceOf(address(this));
-        data.amountBDesired = amountB;
+        data.amountADesired = amount0;
+        data.amountBDesired = amount1;
         _createNewLPAndDeposit(data);
     }
 
@@ -255,16 +271,22 @@ contract SushiFarmer is
         .div(2);
 
         // swap reward tokens for token A
-        uint256[] memory amounts0 = _swapExactRewardsForTokens(
-            splitRewardsBalance,
-            data.tokenAPath
-        );
+        // however, if for example, we receive Sushi as a reward and Sushi is 
+        // also one of the underlying assets, there is no need to swap this reward
+        if (data.tokenAPath[0] != data.tokenAPath[data.tokenAPath.length - 1]) {
+            uint256[] memory amounts0 = _swapExactRewardsForTokens(
+                splitRewardsBalance,
+                data.tokenAPath
+            );
+        }
 
         // swap reward tokens for token B
-        uint256[] memory amounts1 = _swapExactRewardsForTokens(
-            splitRewardsBalance,
-            data.tokenBPath
-        );
+        if (data.tokenBPath[0] != data.tokenBPath[data.tokenBPath.length -1]) {
+            uint256[] memory amounts1 = _swapExactRewardsForTokens(
+                splitRewardsBalance,
+                data.tokenBPath
+            );
+        }
     }
     receive() external payable {
 
