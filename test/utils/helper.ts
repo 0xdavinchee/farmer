@@ -132,10 +132,7 @@ export const maticTokenObject: { [address: string]: Token } =
   tokensToObject(maticTokens);
 
 /** Parse the units given the decimals.*/
-export const parseUnits = (
-  address: string,
-  value: number
-) => {
+export const parseUnits = (address: string, value: number) => {
   const decimals = maticTokenObject[address.toUpperCase()].decimals;
   return ethers.utils.parseUnits(value.toString(), decimals).toString();
 };
@@ -151,14 +148,8 @@ export const createPairs = (
     const token0 = tokenObject[x.token0.id.toUpperCase()];
     const token1 = tokenObject[x.token1.id.toUpperCase()];
     return new Pair(
-      CurrencyAmount.fromRawAmount(
-        token0,
-        parseUnits(x.token0.id, x.reserve0)
-      ),
-      CurrencyAmount.fromRawAmount(
-        token1,
-        parseUnits(x.token1.id, x.reserve1)
-      )
+      CurrencyAmount.fromRawAmount(token0, parseUnits(x.token0.id, x.reserve0)),
+      CurrencyAmount.fromRawAmount(token1, parseUnits(x.token1.id, x.reserve1))
     );
   });
 };
@@ -271,17 +262,11 @@ export const transferTokensToFarmer = async (
   independentAmount: string,
   dependentAmount: string
 ) => {
-  console.log("********** Transferring Tokens To Farmer Contract **********");
+  console.log("\n********** Transferring Tokens To Farmer Contract **********");
 
   // transfer funds to the sushi farmer contract
-  await user.IndependentToken.transfer(
-    farmer,
-    independentAmount
-  );
-  await user.DependentToken.transfer(
-    farmer,
-    dependentAmount
-  );
+  await user.IndependentToken.transfer(farmer, independentAmount);
+  await user.DependentToken.transfer(farmer, dependentAmount);
 };
 
 /**
@@ -307,7 +292,8 @@ export const getLPTokenAmounts = async (
   independentTokenAmount?: BigNumber
 ) => {
   // get our independent token balance
-  let independentTokenBalance = independentTokenAmount || await independentToken.balanceOf(farmer);
+  let independentTokenBalance =
+    independentTokenAmount || (await independentToken.balanceOf(farmer));
   const dependentTokenBalance = await dependentToken.balanceOf(farmer);
   // given our independent token balance, how much dependent token do we need to LP?
   const [reservesA, reservesB] = await v2Pair.getReserves();
@@ -329,7 +315,7 @@ export const getLPTokenAmounts = async (
         independentToken,
         farmer,
         v2Pair,
-        router, 
+        router,
         dependentTokenBalance
       );
   }
@@ -358,10 +344,20 @@ export const printRewardTokensBalance = async (whale: IUser, user: string) => {
     whale.RewardTokenA,
     whale.RewardTokenB
   );
+  const [rewardAName, rewardBName] = getUnderlyingTokenNames(
+    whale.RewardTokenA,
+    whale.RewardTokenB
+  );
 
   console.log("********** Reward Balance **********");
-  console.log("Reward A Balance: ", format(rewardABalance, rewardADecimals));
-  console.log("Reward B Balance: ", format(rewardBBalance, rewardBDecimals));
+  console.log(
+    rewardAName + " Balance: ",
+    format(rewardABalance, rewardADecimals)
+  );
+  console.log(
+    rewardBName + " Balance: ",
+    format(rewardBBalance, rewardBDecimals)
+  );
 };
 
 /**
@@ -377,14 +373,18 @@ export const printTokensBalance = async (whale: IUser, user: string) => {
     whale.IndependentToken,
     whale.DependentToken
   );
+  const [independentTokenName, dependentTokenName] = getUnderlyingTokenNames(
+    whale.IndependentToken,
+    whale.DependentToken
+  );
 
   console.log("********** Tokens Balance **********");
   console.log(
-    "Independent Token Balance: ",
+    independentTokenName + " Balance: ",
     format(independentTokenBalance, independentTokenDecimals)
   );
   console.log(
-    "Dependent Token Balance: ",
+    dependentTokenName + " Balance: ",
     format(dependentTokenBalance, dependentTokenDecimals)
   );
 };
@@ -460,4 +460,18 @@ export const getAndPrintLPBurnMinAmounts = async (
   );
 
   return [farmerLPBalance, amount0, amount1];
+};
+
+/**
+ *
+ * @param user
+ * @returns underlying token name
+ */
+export const getUnderlyingTokenNames = (tokenA: IERC20, tokenB: IERC20) => {
+  const independentTokenName =
+    maticTokenObject[tokenA.address.toUpperCase()].name;
+  const dependentTokenName =
+    maticTokenObject[tokenB.address.toUpperCase()].name;
+
+  return [independentTokenName, dependentTokenName];
 };

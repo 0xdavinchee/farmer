@@ -20,6 +20,7 @@ import {
   maticTokenObject,
   getAndPrintLPBurnMinAmounts,
   printTokensBalance,
+  getUnderlyingTokenNames,
 } from "./utils/helper";
 import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
 
@@ -64,6 +65,11 @@ describe("Polygon SushiFarmer Tests", function () {
       DependentToken.address
     );
 
+    const [independentTokenName, dependentTokenName] = getUnderlyingTokenNames(
+      whale.IndependentToken,
+      whale.DependentToken
+    );
+
     // create a new LP via the sushi router then deposit the LP into
     // the mini chef farm for staking rewards
     const txn = await SushiFarmer.connect(WhaleSigner).createNewLPAndDeposit(
@@ -79,10 +85,13 @@ describe("Polygon SushiFarmer Tests", function () {
     );
 
     console.log(
-      "Independent Token Exchanged: ",
+      independentTokenName + " Exchanged: ",
       format(independentTokenAmount, independentTokenInfo.decimals)
     );
-    console.log("Dependent Token Exchanged: ", format(dependentTokenRequired, dependentTokenInfo.decimals));
+    console.log(
+      dependentTokenName + " Exchanged: ",
+      format(dependentTokenRequired, dependentTokenInfo.decimals)
+    );
 
     const receipt = await txn.wait();
     const lPDepositedSignature = ethers.utils.solidityKeccak256(
@@ -138,8 +147,10 @@ describe("Polygon SushiFarmer Tests", function () {
       // whale is owner of sushifarmer
       await SushiFarmer.setOwner(whale);
     WhaleSigner = await ethers.getSigner(whale);
-    const independentDecimals = maticTokenObject[ADDRESS[ChainId].WETH.toUpperCase()].decimals;
-    const dependentDecimals = maticTokenObject[ADDRESS[ChainId].USDT.toUpperCase()].decimals;
+    const independentDecimals =
+      maticTokenObject[ADDRESS[ChainId].WETH.toUpperCase()].decimals;
+    const dependentDecimals =
+      maticTokenObject[ADDRESS[ChainId].USDT.toUpperCase()].decimals;
     independentTokenInfo = {
       address: ADDRESS[ChainId].WETH,
       amount: ethers.utils.parseUnits("1", independentDecimals).toString(),
@@ -275,7 +286,7 @@ describe("Polygon SushiFarmer Tests", function () {
     console.log("Final Total Debt Amount: ", format(finalTotalDebt));
   });
 
-  it("Should be able to swap rewards for LP assets.", async function () {
+  it.only("Should be able to swap rewards for LP assets.", async function () {
     // should console 0
     await getAndPrintPendingRewardBalance(
       Whale.MiniChef,
