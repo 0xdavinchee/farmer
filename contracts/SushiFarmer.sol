@@ -281,7 +281,7 @@ contract SushiFarmer is
         }
 
         // swap reward tokens for token B
-        if (data.tokenBPath[0] != data.tokenBPath[data.tokenBPath.length -1]) {
+        if (data.tokenBPath[0] != data.tokenBPath[data.tokenBPath.length - 1]) {
             uint256[] memory amounts1 = _swapExactRewardsForTokens(
                 splitRewardsBalance,
                 data.tokenBPath

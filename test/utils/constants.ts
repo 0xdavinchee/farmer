@@ -145,7 +145,7 @@ export const ADDRESS: { [chainId: number]: { [key: string]: string}} = {
     WETH_DAI_SLP: "0x6ff62bfb8c12109e8000935a6de54dad83a4f39f",
     WETH_USDT_SLP: "0xc2755915a85c6f6c1c0f3a86ac8c058f11caa9c9",
     SUSHI_ROUTER: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
-    USDT: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+    USDT: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     MINI_CHEF: process.env.MINI_CHEF_V2_ADDRESS || "",
     USER: process.env.USER_ADDRESS || "",
     WHALE_TEST: process.env.WHALE_TEST_ADDRESS || "",

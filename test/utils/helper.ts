@@ -14,7 +14,13 @@ import ComplexRewardTimerABI from "../abi/ComplexRewardTimer.json";
 import PairABI from "@sushiswap/core/build/abi/IUniswapV2Pair.json";
 import ERC20ABI from "@sushiswap/core/build/abi/ERC20.json";
 import { tokens } from "@sushiswap/default-token-list/build/sushiswap-default.tokenlist.json";
-import { IExchangePair, ISetupProps, ITokenObject, IUser } from "./interfaces";
+import {
+  IExchangePair,
+  IRewardTokenData,
+  ISetupProps,
+  ITokenObject,
+  IUser,
+} from "./interfaces";
 import {
   IComplexRewardTimer,
   IERC20,
@@ -24,8 +30,6 @@ import {
 } from "../../typechain";
 import { ADDRESS } from "./constants";
 import { setupUser } from ".";
-
-// TODO: anywhere using formatUnits or parseUnits MUST take into consideration decimals.
 
 /**
  * This function sets up the contracts by getting all the necessary stateful contracts
@@ -80,8 +84,8 @@ export const setup = async (data: ISetupProps) => {
   return setupObject;
 };
 
-export const format = (x: BigNumber) =>
-  Number(ethers.utils.formatUnits(x.toString()));
+export const format = (x: BigNumber, decimals?: number) =>
+  Number(ethers.utils.formatUnits(x.toString(), decimals));
 
 /** Given an array of tokens, creates pairs of all of them. */
 export const pairs = (arr: Token[]) =>
@@ -112,24 +116,27 @@ export const pairAddresses = maticPairs.map(([tokenA, tokenB]) => {
     : undefined;
 });
 
-/** Returns a key-value object of all tokens, where key is the
- * symbol and pair is the Token object.
+/**
+ * @param arr
+ * @returns a key-value object of all tokens, where key is the
+ * address and pair is the Token object.
  */
-export const tokenToObject = (arr: Token[]) =>
+export const tokensToObject = (arr: Token[]) =>
   arr.reduce((x, y) => {
-    x[y.symbol as string] = y; // TODO: key should be address.toUppercase()
+    x[y.address.toUpperCase()] = y;
     return x;
   }, {} as any);
 
-export const maticTokenObject: { [symbol: string]: Token } =
-  tokenToObject(maticTokens);
+// TODO: move this to constants folder at some point or create a more
+export const maticTokenObject: { [address: string]: Token } =
+  tokensToObject(maticTokens);
 
 /** Parse the units given the decimals.*/
 export const parseUnits = (
   address: string,
-  value: number,
-  decimals: number
+  value: number
 ) => {
+  const decimals = maticTokenObject[address.toUpperCase()].decimals;
   return ethers.utils.parseUnits(value.toString(), decimals).toString();
 };
 
@@ -141,57 +148,55 @@ export const createPairs = (
   tokenObject: ITokenObject
 ) => {
   return pairs.map((x) => {
-    const token0 = tokenObject[x.token0.symbol];
-    const token1 = tokenObject[x.token1.symbol];
+    const token0 = tokenObject[x.token0.id.toUpperCase()];
+    const token1 = tokenObject[x.token1.id.toUpperCase()];
     return new Pair(
       CurrencyAmount.fromRawAmount(
         token0,
-        parseUnits(x.token0.symbol, x.reserve0, token0.decimals)
+        parseUnits(x.token0.id, x.reserve0)
       ),
       CurrencyAmount.fromRawAmount(
         token1,
-        parseUnits(x.token1.symbol, x.reserve1, token1.decimals)
+        parseUnits(x.token1.id, x.reserve1)
       )
     );
   });
 };
 
-/** Gets the data needed for auto compounding a position.
+/**
+ * Gets the data needed for auto compounding a position.
  * Given that the two rewards are sushi/wmatic and a list
  * of the token symbols of the underlying LP position we
  * are compounding, this returns an array of tokenPaths
  * from reward to tokenA/B.
+ * @param pairs
+ * @param tokenAddresses
+ * @param rewardTokenData
+ * @returns
  */
 export const getAutoCompoundData = (
   pairs: Pair[],
-  splitSushiRewards: BigNumber,
-  splitWMaticRewards: BigNumber,
-  tokenSymbols: string[] // TODO: this must be tokenAddresses
+  tokenAddresses: string[],
+  rewardTokenData: IRewardTokenData[] // [0]: splitRewardA | [1]: splitRewardB
 ) => {
-  // TODO: symbol must be address
-  const rewardTokenData = [
-    { symbol: "SUSHI", rewards: splitSushiRewards },
-    { symbol: "WMATIC", rewards: splitWMaticRewards },
-  ];
   let data = [];
   for (let i = 0; i < rewardTokenData.length; i++) {
     let object: {
       tokenAPath: string[];
       tokenBPath: string[];
     } = { tokenAPath: [], tokenBPath: [] };
-    for (let j = 0; j < tokenSymbols.length; j++) {
+    for (let j = 0; j < tokenAddresses.length; j++) {
       // if the reward token is the same as the underlying token
       // set the path w/ two elements, same address
-      if (rewardTokenData[i].symbol === tokenSymbols[j]) {
-        // TODO: we should be passing addresses in here, not .symbol
+      if (rewardTokenData[i].address === tokenAddresses[j]) {
         object.tokenAPath.length === 0
           ? (object.tokenAPath = [
-              rewardTokenData[i].symbol,
-              rewardTokenData[i].symbol,
+              rewardTokenData[i].address,
+              rewardTokenData[i].address,
             ])
           : (object.tokenBPath = [
-              rewardTokenData[i].symbol,
-              rewardTokenData[i].symbol,
+              rewardTokenData[i].address,
+              rewardTokenData[i].address,
             ]);
         continue;
       }
@@ -199,10 +204,10 @@ export const getAutoCompoundData = (
       const rewardTokenToTokenTrade = Trade.bestTradeExactIn(
         pairs,
         CurrencyAmount.fromRawAmount(
-          maticTokenObject[rewardTokenData[i].symbol],
-          splitSushiRewards.toString()
+          maticTokenObject[rewardTokenData[i].address.toUpperCase()],
+          rewardTokenData[0].rewardAmount.toString()
         ),
-        maticTokenObject[tokenSymbols[j]]
+        maticTokenObject[tokenAddresses[j].toUpperCase()]
       );
       const path = rewardTokenToTokenTrade[0].route.path.map((x) => x.address);
       object.tokenAPath.length === 0
@@ -257,8 +262,8 @@ export const getPairAddress = (
  * can start farming.
  * @param user
  * @param farmer
- * @param independentAmount
- * @param dependentAmount
+ * @param independentAmount expects parsed units
+ * @param dependentAmount expects parsed units
  */
 export const transferTokensToFarmer = async (
   user: IUser,
@@ -267,14 +272,15 @@ export const transferTokensToFarmer = async (
   dependentAmount: string
 ) => {
   console.log("********** Transferring Tokens To Farmer Contract **********");
+
   // transfer funds to the sushi farmer contract
   await user.IndependentToken.transfer(
     farmer,
-    ethers.utils.parseUnits(independentAmount)
+    independentAmount
   );
   await user.DependentToken.transfer(
     farmer,
-    ethers.utils.parseUnits(dependentAmount)
+    dependentAmount
   );
 };
 
@@ -297,12 +303,12 @@ export const getLPTokenAmounts = async (
   dependentToken: IERC20,
   farmer: string,
   v2Pair: IUniswapV2Pair,
-  router: IUniswapV2Router02
+  router: IUniswapV2Router02,
+  independentTokenAmount?: BigNumber
 ) => {
   // get our independent token balance
-  let independentTokenBalance = await independentToken.balanceOf(farmer);
+  let independentTokenBalance = independentTokenAmount || await independentToken.balanceOf(farmer);
   const dependentTokenBalance = await dependentToken.balanceOf(farmer);
-
   // given our independent token balance, how much dependent token do we need to LP?
   const [reservesA, reservesB] = await v2Pair.getReserves();
   let dependentTokenRequiredAmount = await router.quote(
@@ -310,7 +316,6 @@ export const getLPTokenAmounts = async (
     reservesA,
     reservesB
   );
-
   // if the dependent token required amount is greater than our balance of the dependent token
   // we will swap dependent token and independent token around so we can add LP.
   if (dependentTokenRequiredAmount > dependentTokenBalance) {
@@ -324,11 +329,20 @@ export const getLPTokenAmounts = async (
         independentToken,
         farmer,
         v2Pair,
-        router
+        router, 
+        dependentTokenBalance
       );
   }
 
   return [independentTokenBalance, dependentTokenRequiredAmount];
+};
+
+export const getTokenDecimals = (tokenA: IERC20, tokenB: IERC20) => {
+  const tokenADecimals =
+    maticTokenObject[tokenA.address.toUpperCase()].decimals;
+  const tokenBDecimals =
+    maticTokenObject[tokenB.address.toUpperCase()].decimals;
+  return [tokenADecimals, tokenBDecimals];
 };
 
 /**
@@ -340,9 +354,14 @@ export const printRewardTokensBalance = async (whale: IUser, user: string) => {
   const rewardABalance = await whale.RewardTokenA.balanceOf(user);
   const rewardBBalance = await whale.RewardTokenB.balanceOf(user);
 
+  const [rewardADecimals, rewardBDecimals] = getTokenDecimals(
+    whale.RewardTokenA,
+    whale.RewardTokenB
+  );
+
   console.log("********** Reward Balance **********");
-  console.log("Reward A Balance: ", format(rewardABalance));
-  console.log("Reward B Balance: ", format(rewardBBalance));
+  console.log("Reward A Balance: ", format(rewardABalance, rewardADecimals));
+  console.log("Reward B Balance: ", format(rewardBBalance, rewardBDecimals));
 };
 
 /**
@@ -354,11 +373,23 @@ export const printTokensBalance = async (whale: IUser, user: string) => {
   const independentTokenBalance = await whale.IndependentToken.balanceOf(user);
   const dependentTokenBalance = await whale.DependentToken.balanceOf(user);
 
+  const [independentTokenDecimals, dependentTokenDecimals] = getTokenDecimals(
+    whale.IndependentToken,
+    whale.DependentToken
+  );
+
   console.log("********** Tokens Balance **********");
-  console.log("Independent Token Balance: ", format(independentTokenBalance));
-  console.log("Dependent Token Balance: ", format(dependentTokenBalance));
+  console.log(
+    "Independent Token Balance: ",
+    format(independentTokenBalance, independentTokenDecimals)
+  );
+  console.log(
+    "Dependent Token Balance: ",
+    format(dependentTokenBalance, dependentTokenDecimals)
+  );
 };
 
+// TODO: we need to pass whale to this function for decimals.
 /**
  * Gets and prints the pending reward balance amount.
  * @param miniChef

@@ -1,4 +1,5 @@
 import { Token } from "@sushiswap/sdk";
+import { BigNumber } from "ethers";
 import {
   IComplexRewardTimer,
   IERC20,
@@ -57,4 +58,15 @@ export interface ISetupProps {
 
 export interface ITokenObject {
   [symbol: string]: Token;
+}
+
+export interface IRewardTokenData {
+  address: string;
+  rewardAmount: BigNumber;
+}
+
+export interface ITestTokenInfo {
+  address: string;
+  amount: string;
+  decimals: number;
 }

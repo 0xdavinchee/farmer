@@ -4,7 +4,7 @@ import RouterABI from "@sushiswap/core/build/abi/IUniswapV2Router02.json";
 import FarmerABI from "../artifacts/contracts/SushiFarmer.sol/SushiFarmer.json";
 import { ADDRESS } from "./utils/constants";
 import { sushi } from "@lufycz/sushi-data";
-import { IExchangePair, IUser } from "./utils/interfaces";
+import { IExchangePair, ITestTokenInfo, IUser } from "./utils/interfaces";
 import { expect } from "chai";
 import {
   createPairs,
@@ -30,6 +30,8 @@ describe("Polygon SushiFarmer Tests", function () {
   let WhaleSigner: SignerWithAddress;
   let ChainId: number;
   let pid: number;
+  let independentTokenInfo: ITestTokenInfo;
+  let dependentTokenInfo: ITestTokenInfo;
 
   const addLiquidityAndDeposit = async (
     whale: IUser,
@@ -78,9 +80,9 @@ describe("Polygon SushiFarmer Tests", function () {
 
     console.log(
       "Independent Token Exchanged: ",
-      format(independentTokenAmount)
+      format(independentTokenAmount, independentTokenInfo.decimals)
     );
-    console.log("Dependent Token Exchanged: ", format(dependentTokenRequired));
+    console.log("Dependent Token Exchanged: ", format(dependentTokenRequired, dependentTokenInfo.decimals));
 
     const receipt = await txn.wait();
     const lPDepositedSignature = ethers.utils.solidityKeccak256(
@@ -95,8 +97,8 @@ describe("Polygon SushiFarmer Tests", function () {
     const decodedLogData = iface.decodeEventLog("LPDeposited", lPDepositedData);
     console.log("Liquidity Received: ", format(decodedLogData["amount"]));
 
-    // get our staked amount from the mini chef
-    const [staked] = await MiniChef.userInfo(5, SushiFarmer.address);
+    // get our staked LP amount from the mini chef
+    const [staked] = await MiniChef.userInfo(pid, SushiFarmer.address);
 
     const formatInitialStaked = format(initialStaked);
     const formatStaked = format(staked);
@@ -136,14 +138,26 @@ describe("Polygon SushiFarmer Tests", function () {
       // whale is owner of sushifarmer
       await SushiFarmer.setOwner(whale);
     WhaleSigner = await ethers.getSigner(whale);
+    const independentDecimals = maticTokenObject[ADDRESS[ChainId].WETH.toUpperCase()].decimals;
+    const dependentDecimals = maticTokenObject[ADDRESS[ChainId].USDT.toUpperCase()].decimals;
+    independentTokenInfo = {
+      address: ADDRESS[ChainId].WETH,
+      amount: ethers.utils.parseUnits("1", independentDecimals).toString(),
+      decimals: independentDecimals,
+    };
+    dependentTokenInfo = {
+      address: ADDRESS[ChainId].USDT,
+      amount: ethers.utils.parseUnits("2500", dependentDecimals).toString(),
+      decimals: dependentDecimals,
+    };
     console.log("SushiFarmer Addr: ", SushiFarmer.address);
   });
 
   beforeEach(async () => {
     const { whale } = await setup({
       pair: ADDRESS[ChainId].WETH_USDT_SLP,
-      independentToken: ADDRESS[ChainId].WETH,
-      dependentToken: ADDRESS[ChainId].USDT,
+      independentToken: independentTokenInfo.address,
+      dependentToken: dependentTokenInfo.address,
       rewardTokenA: ADDRESS[ChainId].SUSHI,
       rewardTokenB: ADDRESS[ChainId].WMATIC,
       chainId: ChainId,
@@ -151,16 +165,21 @@ describe("Polygon SushiFarmer Tests", function () {
     Whale = whale;
   });
 
-  it.only("Should allow me to get my balances", async () => {
+  it("Should allow me to get my balances", async () => {
     await printRewardTokensBalance(Whale, Whale.address);
     await printTokensBalance(Whale, Whale.address);
   });
 
   it("Should allow me to impersonate account and add liquidity and deposit.", async function () {
-    await addLiquidityAndDeposit(Whale, pid, "1", "2000");
+    await addLiquidityAndDeposit(
+      Whale,
+      pid,
+      independentTokenInfo.amount,
+      dependentTokenInfo.amount
+    );
   });
 
-  it("Should be able to claim rewards.", async function () {
+  it.only("Should be able to claim rewards.", async function () {
     console.log("\n********** Claiming Rewards From MiniChef **********");
 
     await getAndPrintPendingRewardBalance(
@@ -172,7 +191,12 @@ describe("Polygon SushiFarmer Tests", function () {
     );
 
     // add LP position and deposit into minichef
-    await addLiquidityAndDeposit(Whale, pid, "1", "2000");
+    await addLiquidityAndDeposit(
+      Whale,
+      pid,
+      independentTokenInfo.amount,
+      dependentTokenInfo.amount
+    );
 
     // increase time and mine a new block
     await hre.network.provider.send("evm_increaseTime", [86400 * 30]);
@@ -205,7 +229,12 @@ describe("Polygon SushiFarmer Tests", function () {
     const lpBalanceInitial = await Whale.V2Pair.balanceOf(Whale.address);
 
     // add LP position and deposit into minichef
-    const staked = await addLiquidityAndDeposit(Whale, pid, "1", "2000");
+    const staked = await addLiquidityAndDeposit(
+      Whale,
+      pid,
+      independentTokenInfo.amount,
+      dependentTokenInfo.amount
+    );
 
     // should be able to withdraw staked LP
     await expect(
@@ -257,7 +286,12 @@ describe("Polygon SushiFarmer Tests", function () {
     );
 
     // add LP position and deposit into minichef
-    const initialStaked = await addLiquidityAndDeposit(Whale, pid, "1", "2000");
+    const initialStaked = await addLiquidityAndDeposit(
+      Whale,
+      pid,
+      independentTokenInfo.amount,
+      dependentTokenInfo.amount
+    );
 
     // increase time and mine a new block
     await hre.network.provider.send("evm_increaseTime", [86400 * 30]);
@@ -272,8 +306,8 @@ describe("Polygon SushiFarmer Tests", function () {
         SushiFarmer.address,
         "30 Days Post-Deposit and Stake"
       );
-    const splitSushiRewards = rewardAAmount.div(2);
-    const splitWMaticRewards = rewardBAmount.div(2);
+    const splitRewardAAmount = rewardAAmount.div(2);
+    const splitRewardBAmount = rewardBAmount.div(2);
 
     // go back a little to make up for the graph indexing lag
     const latestBlock = (await sushi.blocks.latestBlock({ chainId: 137 })) - 2;
@@ -287,9 +321,17 @@ describe("Polygon SushiFarmer Tests", function () {
 
     const data = getAutoCompoundData(
       pairs,
-      splitSushiRewards,
-      splitWMaticRewards,
-      ["WETH", "USDT"]
+      [independentTokenInfo.address, dependentTokenInfo.address],
+      [
+        {
+          address: Whale.RewardTokenA.address,
+          rewardAmount: splitRewardAAmount,
+        },
+        {
+          address: Whale.RewardTokenB.address,
+          rewardAmount: splitRewardBAmount,
+        },
+      ]
     );
 
     await SushiFarmer.connect(WhaleSigner).autoCompoundExistingLPPosition(
@@ -315,7 +357,12 @@ describe("Polygon SushiFarmer Tests", function () {
   it("Should be able to swap LP tokens for underlying assets.", async function () {
     // create LP and deposit, withdraw LP from mini chef to whale address
     // check if the token value amounts match u
-    const staked = await addLiquidityAndDeposit(Whale, pid, "1", "2000");
+    const staked = await addLiquidityAndDeposit(
+      Whale,
+      pid,
+      independentTokenInfo.amount,
+      dependentTokenInfo.amount
+    );
 
     // should be able to withdraw staked LP
     await expect(
