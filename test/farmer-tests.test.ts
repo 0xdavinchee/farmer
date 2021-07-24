@@ -25,6 +25,9 @@ import {
 } from "./utils/helper";
 import { BigNumberish } from "ethers";
 
+// TODO: there are some adjustments that need to be made so 
+// this works w/ different decimal tokens
+
 describe("Polygon SushiFarmer Tests", function () {
   let SushiRouter: IUniswapV2Router02;
   let SushiFarmer: SushiFarmer;
@@ -128,7 +131,7 @@ describe("Polygon SushiFarmer Tests", function () {
     await deployments.fixture(["SushiFarmer"]);
     const { chainId } = await ethers.provider.getNetwork();
     ChainId = 137; // chainId;
-    pid = 1;
+    pid = 5;
     const { whale } = await getNamedAccounts();
 
     // impersonate the whale
@@ -148,7 +151,7 @@ describe("Polygon SushiFarmer Tests", function () {
       await SushiFarmer.setOwner(whale);
     WhaleSigner = await ethers.getSigner(whale);
     const independentAddress = ADDRESS[ChainId].WETH;
-    const dependentAddress = ADDRESS[ChainId].USDC;
+    const dependentAddress = ADDRESS[ChainId].DAI;
     const independentDecimals =
       maticTokenObject[independentAddress.toUpperCase()].decimals;
     const dependentDecimals =
@@ -168,7 +171,7 @@ describe("Polygon SushiFarmer Tests", function () {
 
   beforeEach(async () => {
     const { whale } = await setup({
-      pair: ADDRESS[ChainId].WETH_USDC_SLP,
+      pair: ADDRESS[ChainId].WETH_DAI_SLP,
       independentToken: independentTokenInfo.address,
       dependentToken: dependentTokenInfo.address,
       rewardTokenA: ADDRESS[ChainId].SUSHI,
@@ -178,12 +181,12 @@ describe("Polygon SushiFarmer Tests", function () {
     Whale = whale;
   });
 
-  it.only("Should allow me to get my balances", async () => {
+  it("Should allow me to get my balances", async () => {
     await printRewardTokensBalance(Whale, Whale.address);
     await printTokensBalance(Whale, Whale.address);
   });
 
-  it.only("Should allow me to impersonate account and add liquidity and deposit.", async function () {
+  it("Should allow me to impersonate account and add liquidity and deposit.", async function () {
     await addLiquidityAndDeposit(
       Whale,
       pid,
