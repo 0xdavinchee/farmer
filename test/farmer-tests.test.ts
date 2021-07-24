@@ -2,10 +2,11 @@ import { IUniswapV2Router02, SushiFarmer } from "../typechain";
 import hre, { ethers, deployments, getNamedAccounts } from "hardhat";
 import RouterABI from "@sushiswap/core/build/abi/IUniswapV2Router02.json";
 import FarmerABI from "../artifacts/contracts/SushiFarmer.sol/SushiFarmer.json";
-import { ADDRESS } from "./utils/constants";
 import { sushi } from "@lufycz/sushi-data";
-import { IExchangePair, ITestTokenInfo, IUser } from "./utils/interfaces";
 import { expect } from "chai";
+import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
+import { ADDRESS } from "./utils/constants";
+import { IExchangePair, ITestTokenInfo, IUser } from "./utils/interfaces";
 import {
   createPairs,
   format,
@@ -22,7 +23,7 @@ import {
   printTokensBalance,
   getUnderlyingTokenNames,
 } from "./utils/helper";
-import { SignerWithAddress } from "hardhat-deploy-ethers/dist/src/signers";
+import { BigNumberish } from "ethers";
 
 describe("Polygon SushiFarmer Tests", function () {
   let SushiRouter: IUniswapV2Router02;
@@ -37,27 +38,26 @@ describe("Polygon SushiFarmer Tests", function () {
   const addLiquidityAndDeposit = async (
     whale: IUser,
     pid: number,
-    tokenAAmount: string,
-    tokenBAmount: string
+    desiredTokenAAmount: BigNumberish,
+    tokenBAmount: BigNumberish
   ) => {
-    const { MiniChef, IndependentToken, DependentToken, V2Pair } = whale;
+    const { MiniChef, IndependentToken, DependentToken } = whale;
     // get prior data from the mini chef
     const [initialStaked] = await MiniChef.userInfo(pid, SushiFarmer.address);
 
     await transferTokensToFarmer(
       whale,
       SushiFarmer.address,
-      tokenAAmount,
+      desiredTokenAAmount,
       tokenBAmount
     );
 
     const [independentTokenAmount, dependentTokenRequired] =
       await getLPTokenAmounts(
-        IndependentToken,
-        DependentToken,
+        whale,
         SushiFarmer.address,
-        V2Pair,
-        SushiRouter
+        SushiRouter,
+        desiredTokenAAmount
       );
 
     const pair = getPairAddress(
@@ -128,7 +128,7 @@ describe("Polygon SushiFarmer Tests", function () {
     await deployments.fixture(["SushiFarmer"]);
     const { chainId } = await ethers.provider.getNetwork();
     ChainId = 137; // chainId;
-    pid = 2;
+    pid = 1;
     const { whale } = await getNamedAccounts();
 
     // impersonate the whale
@@ -147,17 +147,19 @@ describe("Polygon SushiFarmer Tests", function () {
       // whale is owner of sushifarmer
       await SushiFarmer.setOwner(whale);
     WhaleSigner = await ethers.getSigner(whale);
+    const independentAddress = ADDRESS[ChainId].WETH;
+    const dependentAddress = ADDRESS[ChainId].USDC;
     const independentDecimals =
-      maticTokenObject[ADDRESS[ChainId].WETH.toUpperCase()].decimals;
+      maticTokenObject[independentAddress.toUpperCase()].decimals;
     const dependentDecimals =
-      maticTokenObject[ADDRESS[ChainId].USDT.toUpperCase()].decimals;
-    independentTokenInfo = {
-      address: ADDRESS[ChainId].WETH,
+      maticTokenObject[dependentAddress.toUpperCase()].decimals;
+    independentTokenInfo = {  
+      address: independentAddress,
       amount: ethers.utils.parseUnits("1", independentDecimals).toString(),
       decimals: independentDecimals,
     };
     dependentTokenInfo = {
-      address: ADDRESS[ChainId].USDT,
+      address: dependentAddress,
       amount: ethers.utils.parseUnits("2500", dependentDecimals).toString(),
       decimals: dependentDecimals,
     };
@@ -166,7 +168,7 @@ describe("Polygon SushiFarmer Tests", function () {
 
   beforeEach(async () => {
     const { whale } = await setup({
-      pair: ADDRESS[ChainId].WETH_USDT_SLP,
+      pair: ADDRESS[ChainId].WETH_USDC_SLP,
       independentToken: independentTokenInfo.address,
       dependentToken: dependentTokenInfo.address,
       rewardTokenA: ADDRESS[ChainId].SUSHI,
@@ -176,12 +178,12 @@ describe("Polygon SushiFarmer Tests", function () {
     Whale = whale;
   });
 
-  it("Should allow me to get my balances", async () => {
+  it.only("Should allow me to get my balances", async () => {
     await printRewardTokensBalance(Whale, Whale.address);
     await printTokensBalance(Whale, Whale.address);
   });
 
-  it("Should allow me to impersonate account and add liquidity and deposit.", async function () {
+  it.only("Should allow me to impersonate account and add liquidity and deposit.", async function () {
     await addLiquidityAndDeposit(
       Whale,
       pid,
@@ -190,12 +192,11 @@ describe("Polygon SushiFarmer Tests", function () {
     );
   });
 
-  it.only("Should be able to claim rewards.", async function () {
+  it("Should be able to claim rewards.", async function () {
     console.log("\n********** Claiming Rewards From MiniChef **********");
 
     await getAndPrintPendingRewardBalance(
-      Whale.MiniChef,
-      Whale.ComplexRewardTimer,
+      Whale,
       pid,
       SushiFarmer.address,
       "Pre-Deposit and Stake"
@@ -206,7 +207,7 @@ describe("Polygon SushiFarmer Tests", function () {
       Whale,
       pid,
       independentTokenInfo.amount,
-      dependentTokenInfo.amount
+      dependentTokenInfo.amount,
     );
 
     // increase time and mine a new block
@@ -215,8 +216,7 @@ describe("Polygon SushiFarmer Tests", function () {
 
     // get our sushi rewards after some time
     await getAndPrintPendingRewardBalance(
-      Whale.MiniChef,
-      Whale.ComplexRewardTimer,
+      Whale,
       pid,
       SushiFarmer.address,
       "30 Days Post-Deposit and Stake"
@@ -228,8 +228,7 @@ describe("Polygon SushiFarmer Tests", function () {
     });
 
     await getAndPrintPendingRewardBalance(
-      Whale.MiniChef,
-      Whale.ComplexRewardTimer,
+      Whale,
       pid,
       SushiFarmer.address,
       "Post Claimed Rewards"
@@ -286,11 +285,10 @@ describe("Polygon SushiFarmer Tests", function () {
     console.log("Final Total Debt Amount: ", format(finalTotalDebt));
   });
 
-  it.only("Should be able to swap rewards for LP assets.", async function () {
+  it("Should be able to swap rewards for LP assets.", async function () {
     // should console 0
     await getAndPrintPendingRewardBalance(
-      Whale.MiniChef,
-      Whale.ComplexRewardTimer,
+      Whale,
       pid,
       SushiFarmer.address,
       "Pre-Deposit and Stake"
@@ -311,8 +309,7 @@ describe("Polygon SushiFarmer Tests", function () {
     // should console more than 0
     const [rewardAAmount, rewardBAmount] =
       await getAndPrintPendingRewardBalance(
-        Whale.MiniChef,
-        Whale.ComplexRewardTimer,
+        Whale,
         pid,
         SushiFarmer.address,
         "30 Days Post-Deposit and Stake"

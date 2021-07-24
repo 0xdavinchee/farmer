@@ -1,12 +1,10 @@
 import { Token } from "@sushiswap/sdk";
-import { BigNumber } from "ethers";
+import { BigNumber, BigNumberish } from "ethers";
 import {
   IComplexRewardTimer,
   IERC20,
   IMiniChefV2,
-  IUniswapV2Pair,
-  IUniswapV2Router02,
-  SushiFarmer,
+  IUniswapV2Pair
 } from "../../typechain";
 
 export interface IExchangePair {
@@ -67,6 +65,6 @@ export interface IRewardTokenData {
 
 export interface ITestTokenInfo {
   address: string;
-  amount: string;
+  amount: BigNumberish;
   decimals: number;
 }

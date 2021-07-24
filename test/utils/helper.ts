@@ -7,7 +7,7 @@ import {
   Token,
   Trade,
 } from "@sushiswap/sdk";
-import { BigNumber, Contract } from "ethers";
+import { BigNumberish } from "ethers";
 import { ethers, getNamedAccounts } from "hardhat";
 import ChefABI from "../abi/MiniChef.json";
 import ComplexRewardTimerABI from "../abi/ComplexRewardTimer.json";
@@ -84,7 +84,7 @@ export const setup = async (data: ISetupProps) => {
   return setupObject;
 };
 
-export const format = (x: BigNumber, decimals?: number) =>
+export const format = (x: BigNumberish, decimals?: number) =>
   Number(ethers.utils.formatUnits(x.toString(), decimals));
 
 /** Given an array of tokens, creates pairs of all of them. */
@@ -259,8 +259,8 @@ export const getPairAddress = (
 export const transferTokensToFarmer = async (
   user: IUser,
   farmer: string,
-  independentAmount: string,
-  dependentAmount: string
+  independentAmount: BigNumberish,
+  dependentAmount: BigNumberish
 ) => {
   console.log("\n********** Transferring Tokens To Farmer Contract **********");
 
@@ -276,27 +276,23 @@ export const transferTokensToFarmer = async (
  * the amount of dependentToken is greater than the
  * farmer's balance, we call this again with independent
  * and dependent token swapped.
- * @param independentToken
- * @param dependentToken
+ * @param user
  * @param farmer
- * @param v2Pair
  * @param router
  * @returns
  */
 export const getLPTokenAmounts = async (
-  independentToken: IERC20,
-  dependentToken: IERC20,
+  user: IUser,
   farmer: string,
-  v2Pair: IUniswapV2Pair,
   router: IUniswapV2Router02,
-  independentTokenAmount?: BigNumber
-) => {
+  independentTokenAmount?: BigNumberish
+): Promise<[BigNumberish, BigNumberish]> => {
   // get our independent token balance
   let independentTokenBalance =
-    independentTokenAmount || (await independentToken.balanceOf(farmer));
-  const dependentTokenBalance = await dependentToken.balanceOf(farmer);
+    independentTokenAmount || (await user.IndependentToken.balanceOf(farmer));
+  const dependentTokenBalance = await user.DependentToken.balanceOf(farmer);
   // given our independent token balance, how much dependent token do we need to LP?
-  const [reservesA, reservesB] = await v2Pair.getReserves();
+  const [reservesA, reservesB] = await user.V2Pair.getReserves();
   let dependentTokenRequiredAmount = await router.quote(
     independentTokenBalance,
     reservesA,
@@ -309,12 +305,10 @@ export const getLPTokenAmounts = async (
       "Dependent token amount required is greater than our dependent token balance."
     );
     console.log("Attempting with dependent token as the independent token.");
-    [independentTokenBalance, dependentTokenRequiredAmount] =
+    [independentTokenBalance, dependentTokenRequiredAmount as BigNumberish] =
       await getLPTokenAmounts(
-        dependentToken,
-        independentToken,
+        user,
         farmer,
-        v2Pair,
         router,
         dependentTokenBalance
       );
@@ -399,20 +393,23 @@ export const printTokensBalance = async (whale: IUser, user: string) => {
  * @returns
  */
 export const getAndPrintPendingRewardBalance = async (
-  miniChef: IMiniChefV2,
-  complexRewardTimer: IComplexRewardTimer,
+  user: IUser,
   pid: number,
-  user: string,
+  farmerAddress: string,
   time: string
 ) => {
-  const rewardAAmount = await miniChef.pendingSushi(pid, user);
-  const [rewardBAddresses, rewardBAmount] =
-    await complexRewardTimer.pendingTokens(pid, user, 0);
+  const rewardAAmount = await user.MiniChef.pendingSushi(pid, farmerAddress);
+  const [, rewardBAmount] =
+    await user.ComplexRewardTimer.pendingTokens(pid, farmerAddress, 0);
+
+    const [rewardATokenName, rewardBTokenName] = getUnderlyingTokenNames(
+      user.RewardTokenA,
+      user.RewardTokenB
+    );
 
   console.log("********** Pending Reward Amounts (" + time + ") **********");
-  console.log("Reward A Amount: ", format(rewardAAmount));
-  console.log("Reward B Address: ", rewardBAddresses[0]);
-  console.log("Reward B Amount: ", format(rewardBAmount[0]));
+  console.log(rewardATokenName + " Amount: ", format(rewardAAmount));
+  console.log(rewardBTokenName + " Amount: ", format(rewardBAmount[0]));
   console.log("\n");
 
   return [rewardAAmount, rewardBAmount[0]];
