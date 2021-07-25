@@ -9,7 +9,7 @@ export enum ContractType {
 }
 
 export enum Storage {
-  ContractAddresses = "CONTRACT_ADDRESSES"
+  ContractAddresses = "CONTRACT_ADDRESSES",
 }
 
 export const contractTypeToArtifactMap = new Map([
