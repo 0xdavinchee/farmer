@@ -306,12 +306,7 @@ export const getLPTokenAmounts = async (
     );
     console.log("Attempting with dependent token as the independent token.");
     [independentTokenBalance, dependentTokenRequiredAmount as BigNumberish] =
-      await getLPTokenAmounts(
-        user,
-        farmer,
-        router,
-        dependentTokenBalance
-      );
+      await getLPTokenAmounts(user, farmer, router, dependentTokenBalance);
   }
 
   return [independentTokenBalance, dependentTokenRequiredAmount];
@@ -399,13 +394,16 @@ export const getAndPrintPendingRewardBalance = async (
   time: string
 ) => {
   const rewardAAmount = await user.MiniChef.pendingSushi(pid, farmerAddress);
-  const [, rewardBAmount] =
-    await user.ComplexRewardTimer.pendingTokens(pid, farmerAddress, 0);
+  const [, rewardBAmount] = await user.ComplexRewardTimer.pendingTokens(
+    pid,
+    farmerAddress,
+    0
+  );
 
-    const [rewardATokenName, rewardBTokenName] = getUnderlyingTokenNames(
-      user.RewardTokenA,
-      user.RewardTokenB
-    );
+  const [rewardATokenName, rewardBTokenName] = getUnderlyingTokenNames(
+    user.RewardTokenA,
+    user.RewardTokenB
+  );
 
   console.log("********** Pending Reward Amounts (" + time + ") **********");
   console.log(rewardATokenName + " Amount: ", format(rewardAAmount));
@@ -439,6 +437,11 @@ export const getAndPrintLPBurnMinAmounts = async (
   const v2PairLiquidity = await user.V2Pair.balanceOf(user.V2Pair.address);
   const totalLiquidity = v2PairLiquidity.add(farmerLPBalance);
 
+  const [independentTokenName, dependentTokenName] = getUnderlyingTokenNames(
+    user.IndependentToken,
+    user.DependentToken
+  );
+
   const amount0 = totalLiquidity
     .mul(v2PairToken0Balance)
     .div(v2PairTotalSupply);
@@ -451,9 +454,13 @@ export const getAndPrintLPBurnMinAmounts = async (
       format(farmerLPBalance) +
       " V2-LP tokens for " +
       format(amount0) +
-      " of token A and " +
+      " " +
+      independentTokenName +
+      " and " +
       format(amount1) +
-      " of token B."
+      " " +
+      dependentTokenName +
+      "."
   );
 
   return [farmerLPBalance, amount0, amount1];
