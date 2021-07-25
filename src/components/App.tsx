@@ -7,6 +7,7 @@ import {
 } from "@material-ui/core";
 import "../App.css";
 import { useMemo } from "react";
+import { Farmer } from "./Farmer";
 
 function App() {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
@@ -24,9 +25,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <Container>
         <div className="App">
-          <header className="App-header">
-            Hello World
-          </header>
+          <Farmer />
         </div>
       </Container>
       <CssBaseline />

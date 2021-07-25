@@ -8,6 +8,10 @@ export enum ContractType {
   UniswapRouter = "UNISWAP_ROUTER",
 }
 
+export enum Storage {
+  ContractAddresses = "CONTRACT_ADDRESSES"
+}
+
 export const contractTypeToArtifactMap = new Map([
   [ContractType.SushiFarmer, SushiFarmerArtifact.abi],
   [ContractType.UniswapRouter, UniswapRouterArtifact.abi],
