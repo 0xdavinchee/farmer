@@ -153,7 +153,7 @@ describe("Polygon SushiFarmer Tests", function () {
       maticTokenObject[independentAddress.toUpperCase()].decimals;
     const dependentDecimals =
       maticTokenObject[dependentAddress.toUpperCase()].decimals;
-    independentTokenInfo = {  
+    independentTokenInfo = {
       address: independentAddress,
       amount: ethers.utils.parseUnits("1", independentDecimals).toString(),
       decimals: independentDecimals,
@@ -207,7 +207,7 @@ describe("Polygon SushiFarmer Tests", function () {
       Whale,
       pid,
       independentTokenInfo.amount,
-      dependentTokenInfo.amount,
+      dependentTokenInfo.amount
     );
 
     // increase time and mine a new block
@@ -285,7 +285,8 @@ describe("Polygon SushiFarmer Tests", function () {
     console.log("Final Total Debt Amount: ", format(finalTotalDebt));
   });
 
-  it("Should be able to swap rewards for LP assets.", async function () {
+  it.only("Should be able to autocompound LP position.", async function () {
+    await printRewardTokensBalance(Whale, SushiFarmer.address);
     // should console 0
     await getAndPrintPendingRewardBalance(
       Whale,
@@ -327,6 +328,13 @@ describe("Polygon SushiFarmer Tests", function () {
 
     const pairs = createPairs(basePairs, maticTokenObject);
 
+    await SushiFarmer.connect(WhaleSigner).setRewardSavings(500, 500);
+
+    // TODO: rewardAmount is currently quite arbitrary as we only obtain
+    // the path that we are executing the trade on. Can consider incorporating
+    // this information and abstracting this complexity to the client to enable
+    // gas savings although there may be a discrepancy between calculation on
+    // client and execution vs. doing it on chain.
     const data = getAutoCompoundData(
       pairs,
       [independentTokenInfo.address, dependentTokenInfo.address],
@@ -348,6 +356,8 @@ describe("Polygon SushiFarmer Tests", function () {
       data,
       { gasLimit: 1000000 }
     );
+
+    await printRewardTokensBalance(Whale, SushiFarmer.address);
 
     // get our staked amount from the mini chef
     const [staked] = await Whale.MiniChef.userInfo(pid, SushiFarmer.address);

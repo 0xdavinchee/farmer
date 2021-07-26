@@ -9,10 +9,10 @@ import {UniswapV2Library} from "@sushiswap/core/contracts/uniswapv2/libraries/Un
 import {IMiniChefV2} from "./interfaces/IMiniChefV2.sol";
 import {Farmer} from "./Farmer.sol";
 
-/// @title SushiFarmer is a contract which helps with managing a farming position on 
+/// @title SushiFarmer is a contract which helps with managing a farming position on
 /// Sushiswap. Its main purpose is to automate compounding of your positions. That is,
 /// taking the reward(s) earned through staking and swapping these for the underlying
-/// assets of your LP position and swapping these for more LP tokens and compounding 
+/// assets of your LP position and swapping these for more LP tokens and compounding
 /// your position.
 /// @author 0xdavinchee
 contract SushiFarmer is
@@ -21,14 +21,28 @@ contract SushiFarmer is
     IMiniChefV2 public chef;
     IERC20 public rewardTokenA;
     IERC20 public rewardTokenB;
+    uint256 public rewardASavingsRate = 0;
+    uint256 public rewardBSavingsRate = 0;
 
-    constructor(IMiniChefV2 _chef, IERC20 _rewardTokenA, IERC20 _rewardTokenB) public {
+    constructor(
+        IMiniChefV2 _chef,
+        IERC20 _rewardTokenA,
+        IERC20 _rewardTokenB
+    ) public {
         chef = _chef;
         rewardTokenA = _rewardTokenA;
         rewardTokenB = _rewardTokenB;
     }
 
     event LPDeposited(uint256 pid, address pair, uint256 amount);
+
+    modifier validSavingsRate(uint256 _savingsRate) {
+        require(
+            _savingsRate >= 0 && _savingsRate <= 1000,
+            "You have selected a savings rate outside of the range (0-100%)."
+        );
+        _;
+    }
 
     /** @dev This function allows the user to create a new LP position as
      * long as the contract holds enough tokens given the desired amounts
@@ -61,8 +75,12 @@ contract SushiFarmer is
 
         address tokenA = _data[0].tokenAPath[_data[0].tokenAPath.length - 1];
         address tokenB = _data[0].tokenBPath[_data[0].tokenBPath.length - 1];
-        (address token0, address token1) = UniswapV2Library.sortTokens(tokenA, tokenB);
-        (uint112 reserve0, uint112 reserve1,) = IUniswapV2Pair(_pair).getReserves();
+        (address token0, address token1) = UniswapV2Library.sortTokens(
+            tokenA,
+            tokenB
+        );
+        (uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(_pair)
+        .getReserves();
 
         uint256 amount0 = IERC20(token0).balanceOf(address(this));
         uint256 amount1 = router.quote(amount0, reserve0, reserve1);
@@ -170,8 +188,29 @@ contract SushiFarmer is
         uint256 _amountTokensDesired,
         uint256 _amountETHMin,
         uint256 _slippage
-    ) public onlyOwner payable override returns (uint256) {
-        return _getLPTokensETH(_token, _amountTokensDesired, _amountETHMin, _slippage);
+    ) public payable override onlyOwner returns (uint256) {
+        return
+            _getLPTokensETH(
+                _token,
+                _amountTokensDesired,
+                _amountETHMin,
+                _slippage
+            );
+    }
+
+    /** @dev Allow the user to set reward savings rate. That is, they can
+     * choose how much of the rewards they'd like to save specifically
+     * for each token, this value dicates how much of the rewards will be
+     * used to autocompound their existing LP position.
+     */
+    function setRewardSavings(uint256 _rewardARate, uint256 _rewardBRate)
+        public
+        onlyOwner
+        validSavingsRate(_rewardARate)
+        validSavingsRate(_rewardBRate)
+    {
+        rewardASavingsRate = _rewardARate;
+        rewardBSavingsRate = _rewardBRate;
     }
 
     function _getLPTokensETH(
@@ -259,18 +298,21 @@ contract SushiFarmer is
     {
         RewardsForTokensPaths calldata data = _data;
         address rewardToken = data.tokenAPath[0];
+        uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(this));
+        uint256 allotedRewardBalance = rewardToken == address(rewardTokenA) 
+            ? rewardBalance.mul(ONE_HUNDRED_PERCENT.sub(rewardASavingsRate)).div(ONE_HUNDRED_PERCENT)
+            : rewardBalance.mul(ONE_HUNDRED_PERCENT.sub(rewardBSavingsRate)).div(ONE_HUNDRED_PERCENT);
+
         // approve reward token spend by the router for this txn
         IERC20(rewardToken).approve(
             address(router),
-            IERC20(rewardToken).balanceOf(address(this))
+            allotedRewardBalance
         );
 
-        uint256 splitRewardsBalance = IERC20(rewardToken)
-        .balanceOf(address(this))
-        .div(2);
+        uint256 splitRewardsBalance = allotedRewardBalance.div(2);
 
         // swap reward tokens for token A
-        // however, if for example, we receive Sushi as a reward and Sushi is 
+        // however, if for example, we receive Sushi as a reward and Sushi is
         // also one of the underlying assets, there is no need to swap this reward
         if (data.tokenAPath[0] != data.tokenAPath[data.tokenAPath.length - 1]) {
             uint256[] memory amounts0 = _swapExactRewardsForTokens(
@@ -287,9 +329,8 @@ contract SushiFarmer is
             );
         }
     }
-    receive() external payable {
 
-    }
+    receive() external payable {}
 
     function _swapExactRewardsForTokens(
         uint256 _splitRewardsBalance,

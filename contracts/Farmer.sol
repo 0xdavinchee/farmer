@@ -25,7 +25,7 @@ abstract contract Farmer is Ownable {
         address[] tokenBPath; // first addr: reward token, last addr: _tokenB
     }
 
-    uint256 public constant ONE_HUNDRED_PERCENT = 1000;
+    uint256 public constant ONE_HUNDRED_PERCENT = 1000; // allows one dp sig
     IUniswapV2Router02 public router;
 
     constructor(IUniswapV2Router02 _router) public {

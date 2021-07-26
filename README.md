@@ -115,7 +115,7 @@ You will also need a few `.env` variables for things to work properly:
 ## Usage
 1. To use this without a frontend, you will to know how to interact with contracts using the hardhat console: https://ethereum.stackexchange.com/questions/93657/how-to-interact-with-the-functions-of-my-smart-contract-in-hardhat.
 2. You also have the option of deploying and then verifying the contract and interacting with it through etherscan/polygonscan/etc.
-3. To run tests, you will have to do this on a fork of mainnet as I don't believe any of the testnets have farms. The forking config is already set up in `hardhat.config.ts`. The variables you will change in `farmer-tests.test.ts` are: `chainId`, `pid`, `independentAddress`, `dependentAddress`, `independentTokenInfo`, `dependentTokenInfo`, `rewardTokenA` and `rewardTokenB`. This will allow you to test the SushiFarmer contract on other chains, with other farms and different reward types.
+3. To run tests, you will have to do this on a fork of mainnet as I don't believe any of the testnets have farms. The forking config is already set up in `hardhat.config.ts`. The variables you will change in `farmer-tests.test.ts` are: `chainId`, `pid`, `independentAddress`, `dependentAddress`, `independentTokenInfo`, `dependentTokenInfo`, `rewardTokenA` and `rewardTokenB`. This will allow you to test the SushiFarmer contract on other chains, with other farms and different reward types. Use the command `yarn test --network localhost`.
 
 
 <!-- CONTRIBUTING -->

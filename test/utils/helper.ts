@@ -352,6 +352,7 @@ export const printRewardTokensBalance = async (whale: IUser, user: string) => {
     rewardBName + " Balance: ",
     format(rewardBBalance, rewardBDecimals)
   );
+  console.log("\n");
 };
 
 /**
