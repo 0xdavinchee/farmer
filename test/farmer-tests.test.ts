@@ -25,9 +25,6 @@ import {
 } from "./utils/helper";
 import { BigNumberish } from "ethers";
 
-// TODO: there are some adjustments that need to be made so 
-// this works w/ different decimal tokens
-
 describe("Polygon SushiFarmer Tests", function () {
   let SushiRouter: IUniswapV2Router02;
   let SushiFarmer: SushiFarmer;

@@ -149,7 +149,6 @@ export const ADDRESS: { [chainId: number]: { [key: string]: string}} = {
     USDT: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     USDC: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
     MINI_CHEF: process.env.MINI_CHEF_V2_ADDRESS || "",
-    USER: process.env.USER_ADDRESS || "",
     WHALE_TEST: process.env.WHALE_TEST_ADDRESS || "",
   }
 };

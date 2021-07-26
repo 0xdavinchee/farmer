@@ -68,10 +68,9 @@ contract SushiFarmer is
         uint256 amount1 = router.quote(amount0, reserve0, reserve1);
         uint256 token1Balance = IERC20(token1).balanceOf(address(this));
         if (amount1 > token1Balance) {
-            amount1 = token1Balance;
-            amount0 = router.quote(amount1, reserve1, reserve0);
+            amount0 = router.quote(token1Balance, reserve1, reserve0);
+            amount1 = router.quote(amount0, reserve0, reserve1);
         }
-
         CreateLPData memory data;
         data.pid = _pid;
         data.pair = _pair;

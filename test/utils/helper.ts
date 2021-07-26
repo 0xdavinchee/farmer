@@ -287,29 +287,34 @@ export const getLPTokenAmounts = async (
   router: IUniswapV2Router02,
   independentTokenAmount?: BigNumberish
 ): Promise<[BigNumberish, BigNumberish]> => {
-  // get our independent token balance
-  let independentTokenBalance =
+  // get our independent (amount0) and dependent (amount1) token balance(s)
+  let amount0 =
     independentTokenAmount || (await user.IndependentToken.balanceOf(farmer));
-  const dependentTokenBalance = await user.DependentToken.balanceOf(farmer);
-  // given our independent token balance, how much dependent token do we need to LP?
+  const amount1Balance = await user.DependentToken.balanceOf(farmer);
+
   const [reservesA, reservesB] = await user.V2Pair.getReserves();
-  let dependentTokenRequiredAmount = await router.quote(
-    independentTokenBalance,
-    reservesA,
-    reservesB
-  );
+  // sort the pairs token's reserves
+  const token0 = await user.V2Pair.token0();
+  const [reserve0, reserve1] =
+    token0 === user.IndependentToken.address
+      ? [reservesA, reservesB]
+      : [reservesB, reservesA];
+  // given our independent token balance, how much dependent token do we need to LP?
+  let amount1 = await router.quote(amount0, reserve0, reserve1);
+
   // if the dependent token required amount is greater than our balance of the dependent token
-  // we will swap dependent token and independent token around so we can add LP.
-  if (dependentTokenRequiredAmount > dependentTokenBalance) {
+  // we will get the new amount0 based on the amount1Balance and then get the new amount1 value
+  // based on the new amount0
+  if (amount1 > amount1Balance) {
     console.log(
       "Dependent token amount required is greater than our dependent token balance."
     );
     console.log("Attempting with dependent token as the independent token.");
-    [independentTokenBalance, dependentTokenRequiredAmount as BigNumberish] =
-      await getLPTokenAmounts(user, farmer, router, dependentTokenBalance);
+    amount0 = await router.quote(amount1Balance, reserve1, reserve0);
+    amount1 = await router.quote(amount0, reserve0, reserve1);
   }
 
-  return [independentTokenBalance, dependentTokenRequiredAmount];
+  return [amount0, amount1];
 };
 
 export const getTokenDecimals = (tokenA: IERC20, tokenB: IERC20) => {
