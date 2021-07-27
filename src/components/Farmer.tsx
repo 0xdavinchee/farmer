@@ -9,6 +9,13 @@ import {
 } from "../utils/helpers";
 import { IExistingContracts } from "../utils/interface";
 
+interface IExistingLPPosition {
+  readonly independentToken: string;
+  readonly dependentToken: string;
+  readonly pair: string;
+  readonly pid: string;
+}
+
 export const Farmer = () => {
   const [chainID, setChainID] = useState<number | null>(null);
   const [existingContracts, setExistingContracts] =
@@ -17,6 +24,7 @@ export const Farmer = () => {
   const [farmerAddress, setFarmerAddress] = useState<string | null>();
   const [owner, setOwner] = useState<string | null>();
   const [user, setUser] = useState<string | null>();
+  const [existingLpPositions, setExistingLpPositions] = useState<IExistingLPPosition[]>([]);
 
   const isUserOwnerOfContract = owner === user;
 
@@ -42,6 +50,15 @@ export const Farmer = () => {
     if (chainID == null || existingContracts == null) return;
     setFarmerAddress(existingContracts[chainID]);
   }, [chainID, existingContracts]);
+
+  /** Get existing LP positions on the current chain. */
+  useEffect(() => { 
+    if (!chainID) return;
+    (async () => {
+      // const existingLPPositions = await getExistingLPPositions();
+      // setExistingLpPositions(existingLPPositions)
+    })()
+  }, [chainID]);
 
   useEffect(() => {
     if (isGlobalEthereumObjectEmpty) return;
