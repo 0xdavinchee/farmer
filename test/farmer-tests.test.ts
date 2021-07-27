@@ -10,9 +10,9 @@ import { IExchangePair, ITestTokenInfo, IUser } from "./utils/interfaces";
 import {
   createPairs,
   format,
-  getAutoCompoundData,
+  getRewardToTokenPaths,
   printRewardTokensBalance,
-  pairAddresses,
+  maticPairAddresses,
   setup,
   transferTokensToFarmer,
   getLPTokenAmounts,
@@ -323,7 +323,7 @@ describe("Polygon SushiFarmer Tests", function () {
     const basePairs: IExchangePair[] = await sushi.exchange.pairs({
       chainId: 137,
       latestBlock, // go back one second just to be safe
-      addresses: pairAddresses, // pair addresses (base tokens)
+      addresses: maticPairAddresses, // pair addresses (base tokens)
     });
 
     const pairs = createPairs(basePairs, maticTokenObject);
@@ -335,7 +335,7 @@ describe("Polygon SushiFarmer Tests", function () {
     // this information and abstracting this complexity to the client to enable
     // gas savings although there may be a discrepancy between calculation on
     // client and execution vs. doing it on chain.
-    const data = getAutoCompoundData(
+    const data = getRewardToTokenPaths(
       pairs,
       [independentTokenInfo.address, dependentTokenInfo.address],
       [

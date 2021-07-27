@@ -102,7 +102,7 @@ export const maticTokens = tokens
 export const maticPairs = pairs(maticTokens);
 
 /** Returns a list pair addresses given a list of pairs. */
-export const pairAddresses = maticPairs.map(([tokenA, tokenB]) => {
+export const maticPairAddresses = maticPairs.map(([tokenA, tokenB]) => {
   return tokenA &&
     tokenB &&
     tokenA.chainId === tokenB.chainId &&
@@ -165,7 +165,7 @@ export const createPairs = (
  * @param rewardTokenData
  * @returns
  */
-export const getAutoCompoundData = (
+export const getRewardToTokenPaths = (
   pairs: Pair[],
   tokenAddresses: string[],
   rewardTokenData: IRewardTokenData[] // [0]: splitRewardA | [1]: splitRewardB
