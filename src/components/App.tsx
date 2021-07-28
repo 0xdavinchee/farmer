@@ -5,7 +5,6 @@ import {
   ThemeProvider,
   useMediaQuery,
 } from "@material-ui/core";
-import "../App.css";
 import { useMemo } from "react";
 import { Farmer } from "./Farmer";
 
@@ -14,19 +13,35 @@ function App() {
   const theme = useMemo(
     () =>
       createTheme({
+        overrides: {
+          MuiInputLabel: {
+            root: {
+              fontSize: "1.4rem",
+              "&$focused": { fontSize: "1.4rem" },
+            },
+            shrink: { fontSize: "1.4rem" },
+          },
+          MuiInputBase: {
+            root: { fontSize: "1.4rem" },
+          },
+        },
         palette: {
           type: prefersDarkMode ? "dark" : "light",
           primary: { main: "#6d8cfc" },
+        },
+        typography: {
+          fontFamily: "VT323",
+          body1: {
+            fontSize: "1.2rem",
+          },
         },
       }),
     [prefersDarkMode]
   );
   return (
     <ThemeProvider theme={theme}>
-      <Container>
-        <div className="App">
-          <Farmer />
-        </div>
+      <Container className="app-container">
+        <Farmer />
       </Container>
       <CssBaseline />
     </ThemeProvider>

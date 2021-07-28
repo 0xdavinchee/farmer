@@ -11,3 +11,28 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.landing-page-title-container {
+  display: flex;  
+  justify-content: center;
+  margin-top: 3rem;
+}
+
+.landing-page-farmer {
+  margin-left: 1.5rem;
+  max-height: 100px;
+}
+
+.landing-page-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5rem;
+}
+
+.landing-input {
+  min-width: 420px !important;
+}
+.landing-input input {
+  text-align: center;
+}

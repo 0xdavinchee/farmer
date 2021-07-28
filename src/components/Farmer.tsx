@@ -1,4 +1,5 @@
 import { Button, TextField, Typography } from "@material-ui/core";
+import farmerEmoji from "../farmer.png";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { SushiFarmer } from "../typechain";
@@ -21,10 +22,12 @@ export const Farmer = () => {
   const [existingContracts, setExistingContracts] =
     useState<IExistingContracts | null>(null);
   const [farmer, setFarmer] = useState<SushiFarmer | undefined>();
-  const [farmerAddress, setFarmerAddress] = useState<string | null>();
+  const [farmerAddress, setFarmerAddress] = useState<string | undefined>();
   const [owner, setOwner] = useState<string | null>();
   const [user, setUser] = useState<string | null>();
-  const [existingLpPositions, setExistingLpPositions] = useState<IExistingLPPosition[]>([]);
+  const [existingLpPositions, setExistingLpPositions] = useState<
+    IExistingLPPosition[]
+  >([]);
 
   const isUserOwnerOfContract = owner === user;
 
@@ -46,18 +49,20 @@ export const Farmer = () => {
     }
   }, []);
 
+  /** Add existing farmer address if there is one saved in localStorage. */
   useEffect(() => {
     if (chainID == null || existingContracts == null) return;
     setFarmerAddress(existingContracts[chainID]);
+    addExistingFarmer(existingContracts[chainID]);
   }, [chainID, existingContracts]);
 
   /** Get existing LP positions on the current chain. */
-  useEffect(() => { 
+  useEffect(() => {
     if (!chainID) return;
     (async () => {
       // const existingLPPositions = await getExistingLPPositions();
       // setExistingLpPositions(existingLPPositions)
-    })()
+    })();
   }, [chainID]);
 
   useEffect(() => {
@@ -86,7 +91,7 @@ export const Farmer = () => {
     // TODO: create a new farmer contract where the user is the creator of the contract.
   };
 
-  const addExistingFarmer = async () => {
+  const addExistingFarmer = async (farmerAddress: string | undefined) => {
     if (!farmerAddress) return;
     const isAddress = ethers.utils.isAddress(farmerAddress);
     if (!isAddress) {
@@ -106,14 +111,21 @@ export const Farmer = () => {
 
   return (
     <div>
-      <Typography>Farmer</Typography>
-      <TextField
-        value={farmerAddress}
-        onChange={(e) => setFarmerAddress(e.target.value)}
-      />
-      <Button onClick={addExistingFarmer}>Add Existing</Button>
-      or
-      <Button onClick={createFarmer}>Create</Button>
+      <div className="landing-page-title-container">
+        <Typography variant="h1">Farmer</Typography>
+        <img src={farmerEmoji} className="landing-page-farmer" />
+      </div>
+      <div className="landing-page-container">
+        <Typography variant="h4">Enter Contract Address</Typography>
+        <TextField
+          className="landing-input"
+          value={farmerAddress}
+          onChange={(e) => setFarmerAddress(e.target.value)}
+        />
+        <Button onClick={createFarmer}>
+          <Typography variant="body1">Create</Typography>
+        </Button>
+      </div>
     </div>
   );
 };
