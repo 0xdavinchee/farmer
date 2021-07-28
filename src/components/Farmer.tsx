@@ -112,18 +112,18 @@ export const Farmer = () => {
   return (
     <div>
       <div className="landing-page-title-container">
-        <Typography variant="h1">Farmer</Typography>
+        <Typography variant="h1">farmer</Typography>
         <img src={farmerEmoji} className="landing-page-farmer" />
       </div>
       <div className="landing-page-container">
-        <Typography variant="h4">Enter Contract Address</Typography>
+        <Typography variant="h4">enter contract address</Typography>
         <TextField
           className="landing-input"
           value={farmerAddress}
           onChange={(e) => setFarmerAddress(e.target.value)}
         />
-        <Button onClick={createFarmer}>
-          <Typography variant="body1">Create</Typography>
+        <Button className="landing-button" color="primary" variant="contained" onClick={createFarmer}>
+          <Typography variant="body1">create</Typography>
         </Button>
       </div>
     </div>

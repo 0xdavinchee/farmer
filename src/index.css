@@ -36,3 +36,7 @@ code {
 .landing-input input {
   text-align: center;
 }
+
+.landing-button {
+  margin-top: 1.5rem !important;
+}
