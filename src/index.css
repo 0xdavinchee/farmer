@@ -11,16 +11,36 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+/** Nav Styles */
+.nav-container {
+  display: flex;
+  justify-content: space-between;
+}
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+.farmer-logo {
+  max-height: 50px;
+}
+.nav-title {
+  margin-left: 20px !important;
+  font-weight: bold;
+}
+.nav-button {
+  height: 45px;
+}
+.nav-eth-data {
+  display: flex;
+}
+.eth-address {
+  margin-left: 1rem;
+}
 
 .landing-page-title-container {
   display: flex;  
   justify-content: center;
   margin-top: 3rem;
-}
-
-.landing-page-farmer {
-  margin-left: 1.5rem;
-  max-height: 100px;
 }
 
 .landing-page-container {
@@ -31,6 +51,8 @@ code {
 }
 
 .landing-input {
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
   min-width: 420px !important;
 }
 .landing-input input {
@@ -39,4 +61,5 @@ code {
 
 .landing-button {
   margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
 }

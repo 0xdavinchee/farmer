@@ -10,6 +10,7 @@ export enum ContractType {
 
 export enum Storage {
   ContractAddresses = "CONTRACT_ADDRESSES",
+  HasVisited = "HAS_VISITED",
 }
 
 export const contractTypeToArtifactMap = new Map([
@@ -17,3 +18,8 @@ export const contractTypeToArtifactMap = new Map([
   [ContractType.UniswapRouter, UniswapRouterArtifact.abi],
   [ContractType.UniswapV2Pair, UniswapV2PairArtifact.abi],
 ]);
+
+export const PATH = {
+  Landing: "/",
+  Home: "/farm",
+};

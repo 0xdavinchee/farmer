@@ -1,14 +1,63 @@
-import { Button, TextField, Typography } from "@material-ui/core";
-import farmerEmoji from "../farmer.png";
+import { Button, Container, TextField, Typography } from "@material-ui/core";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { SushiFarmer } from "../typechain";
-import { ContractType, Storage } from "../utils/constants";
+import { ContractType, PATH, Storage } from "../utils/constants";
 import {
   initializeContract,
   isGlobalEthereumObjectEmpty,
 } from "../utils/helpers";
 import { IExistingContracts } from "../utils/interface";
+import {
+  BrowserRouter,
+  Route,
+  Switch,
+  useHistory,
+  useLocation,
+} from "react-router-dom";
+import Nav from "./Nav";
+import { ILandingProps, Landing } from "./Landing";
+
+const checkHasVisited = () => {
+  try {
+    return localStorage.getItem(Storage.HasVisited) === "true";
+  } catch {
+    return false;
+  }
+};
+interface IRouterProps extends ILandingProps {}
+
+const Router = ({
+  farmerAddress,
+  createFarmer,
+  setFarmerAddress,
+}: IRouterProps) => {
+  const history = useHistory();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname !== PATH.Landing) return;
+    const hasEntered = checkHasVisited();
+
+    if (hasEntered) {
+      history.push(PATH.Home);
+    } else {
+      history.push(PATH.Landing);
+    }
+  }, [history, location.pathname]);
+
+  return (
+    <Switch>
+      <Route path={PATH.Landing}>
+        <Landing
+          farmerAddress={farmerAddress}
+          createFarmer={createFarmer}
+          setFarmerAddress={(x) => setFarmerAddress(x)}
+        />
+      </Route>
+    </Switch>
+  );
+};
 
 interface IExistingLPPosition {
   readonly independentToken: string;
@@ -22,14 +71,14 @@ export const Farmer = () => {
   const [existingContracts, setExistingContracts] =
     useState<IExistingContracts | null>(null);
   const [farmer, setFarmer] = useState<SushiFarmer | undefined>();
-  const [farmerAddress, setFarmerAddress] = useState<string | undefined>();
-  const [owner, setOwner] = useState<string | null>();
-  const [user, setUser] = useState<string | null>();
+  const [farmerAddress, setFarmerAddress] = useState("");
+  const [owner, setOwner] = useState("");
+  const [user, setUser] = useState("");
   const [existingLpPositions, setExistingLpPositions] = useState<
     IExistingLPPosition[]
   >([]);
 
-  const isUserOwnerOfContract = owner === user;
+  const isUserOwnerOfContract = owner === user && user !== "";
 
   // we can store the contract addresses in localStorage, but we can also query events
   // and get all contracts created by the user (v2)
@@ -91,41 +140,40 @@ export const Farmer = () => {
     // TODO: create a new farmer contract where the user is the creator of the contract.
   };
 
-  const addExistingFarmer = async (farmerAddress: string | undefined) => {
-    if (!farmerAddress) return;
+  const addExistingFarmer = async (farmerAddress: string) => {
+    if (!farmerAddress.trim()) return;
     const isAddress = ethers.utils.isAddress(farmerAddress);
     if (!isAddress) {
-      // alert user that address is not valid.
       return;
     }
-    const farmerContract = initializeContract(
-      farmerAddress,
-      ContractType.SushiFarmer
-    );
-    if (farmerContract) {
-      const owner = await farmerContract.owner();
-      setOwner(owner);
+    try {
+      const farmerContract = initializeContract(
+        farmerAddress,
+        ContractType.SushiFarmer
+      );
+      if (farmerContract) {
+        const owner = await farmerContract.owner();
+        setOwner(owner);
+      }
+      setFarmer(farmerContract);
+      localStorage.setItem(Storage.HasVisited, "true");
+    } catch (err) {
+      console.error(err);
     }
-    setFarmer(farmerContract);
   };
 
   return (
     <div>
-      <div className="landing-page-title-container">
-        <Typography variant="h1">farmer</Typography>
-        <img src={farmerEmoji} className="landing-page-farmer" />
-      </div>
-      <div className="landing-page-container">
-        <Typography variant="h4">enter contract address</Typography>
-        <TextField
-          className="landing-input"
-          value={farmerAddress}
-          onChange={(e) => setFarmerAddress(e.target.value)}
-        />
-        <Button className="landing-button" color="primary" variant="contained" onClick={createFarmer}>
-          <Typography variant="body1">create</Typography>
-        </Button>
-      </div>
+      <BrowserRouter>
+        <Nav userAddress={user} setUserAddress={(x) => setUser(x)} />
+        <Container>
+          <Router
+            farmerAddress={farmerAddress}
+            createFarmer={() => addExistingFarmer(farmerAddress)}
+            setFarmerAddress={(x) => setFarmerAddress(x)}
+          />
+        </Container>
+      </BrowserRouter>
     </div>
   );
 };

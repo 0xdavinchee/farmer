@@ -1,5 +1,4 @@
 import {
-  Container,
   createTheme,
   CssBaseline,
   ThemeProvider,
@@ -10,23 +9,12 @@ import { Farmer } from "./Farmer";
 
 function App() {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+  console.log(prefersDarkMode);
   const theme = useMemo(
     () =>
       createTheme({
-        overrides: {
-          MuiInputLabel: {
-            root: {
-              fontSize: "1.4rem",
-              "&$focused": { fontSize: "1.4rem" },
-            },
-            shrink: { fontSize: "1.4rem" },
-          },
-          MuiInputBase: {
-            root: { fontSize: "1.4rem" },
-          },
-        },
         palette: {
-          type: prefersDarkMode ? "dark" : "light",
+          mode: prefersDarkMode ? "dark" : "light",
           primary: { main: "#6d8cfc" },
         },
         typography: {
@@ -40,9 +28,7 @@ function App() {
   );
   return (
     <ThemeProvider theme={theme}>
-      <Container className="app-container">
         <Farmer />
-      </Container>
       <CssBaseline />
     </ThemeProvider>
   );
