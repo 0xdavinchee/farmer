@@ -48,6 +48,9 @@ const Router = ({
 
   return (
     <Switch>
+      <Route path={PATH.Home}>
+        Hello
+      </Route>
       <Route path={PATH.Landing}>
         <Landing
           farmerAddress={farmerAddress}
