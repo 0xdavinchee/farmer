@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.6.12;
+pragma experimental ABIEncoderV2;
 
 import {IUniswapV2Router02} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Router02.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
@@ -115,10 +116,10 @@ abstract contract Farmer is Ownable {
     /** @dev Swaps claimed reward tokens for equal amounts of the LP assets
      * you need from an LP contract.
      */
-    function _swapRewardsForLPAssets(RewardsForTokensPaths calldata data)
-        internal
-        virtual
-        returns (uint256[] memory amounts);
+    function _swapRewardsForLPAssets(
+        RewardsForTokensPaths calldata data,
+        uint256 _preClaimRewardsBalance
+    ) public payable virtual returns (uint256[] memory amounts);
 
     /** @dev A Helper function for getting the minimum amount of tokens
      * to receive given a desired amount and slippage as expressed in

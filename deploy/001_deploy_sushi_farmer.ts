@@ -14,6 +14,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       process.env.MINI_CHEF_V2_ADDRESS,
       ADDRESS[ChainId.MATIC].SUSHI,
       ADDRESS[ChainId.MATIC].WMATIC,
+      false,
     ],
     log: true,
   });

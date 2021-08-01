@@ -7,6 +7,7 @@ import {IUniswapV2Router02} from "@sushiswap/core/contracts/uniswapv2/interfaces
 import {IUniswapV2Pair} from "@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Pair.sol";
 import {UniswapV2Library} from "@sushiswap/core/contracts/uniswapv2/libraries/UniswapV2Library.sol";
 import {IMiniChefV2} from "./interfaces/IMiniChefV2.sol";
+import {IWrappedToken} from "./interfaces/IWrappedToken.sol";
 import {Farmer} from "./Farmer.sol";
 
 /// @title SushiFarmer is a contract which helps with managing a farming position on
@@ -20,18 +21,21 @@ contract SushiFarmer is
 {
     IMiniChefV2 public chef;
     IERC20 public rewardTokenA;
-    IERC20 public rewardTokenB;
+    IERC20 public rewardTokenB; // if hasNativeReward, this should be wrapped token addr
     uint256 public rewardASavingsRate = 0;
     uint256 public rewardBSavingsRate = 0;
+    bool public hasNativeReward;
 
     constructor(
         IMiniChefV2 _chef,
         IERC20 _rewardTokenA,
-        IERC20 _rewardTokenB
+        IERC20 _rewardTokenB,
+        bool _hasNativeReward
     ) public {
         chef = _chef;
         rewardTokenA = _rewardTokenA;
         rewardTokenB = _rewardTokenB;
+        hasNativeReward = _hasNativeReward;
     }
 
     event LPDeposited(uint256 pid, address pair, uint256 amount);
@@ -66,11 +70,15 @@ contract SushiFarmer is
         address _pair,
         RewardsForTokensPaths[] calldata _data
     ) external onlyOwner {
+        uint256 preClaimRewardsBalance = address(this).balance;
         _claimRewards(_pid);
 
         // _data will always be length = 2.
         for (uint256 i = 0; i < _data.length; i++) {
-            uint256[] memory amounts = _swapRewardsForLPAssets(_data[i]);
+            uint256[] memory amounts = _swapRewardsForLPAssets(
+                _data[i],
+                preClaimRewardsBalance
+            );
         }
 
         address tokenA = _data[0].tokenAPath[_data[0].tokenAPath.length - 1];
@@ -213,6 +221,11 @@ contract SushiFarmer is
         rewardBSavingsRate = _rewardBRate;
     }
 
+    function setRewardTokens(address _rewardTokenA, address _rewardTokenB) public onlyOwner {
+        rewardTokenA = IERC20(_rewardTokenA);
+        rewardTokenB = IERC20(_rewardTokenB);
+    }
+
     function _getLPTokensETH(
         address _token,
         uint256 _amountTokensDesired,
@@ -291,23 +304,29 @@ contract SushiFarmer is
         chef.harvest(_pid, address(this));
     }
 
-    function _swapRewardsForLPAssets(RewardsForTokensPaths calldata _data)
-        internal
-        override
-        returns (uint256[] memory)
-    {
+    function _swapRewardsForLPAssets(
+        RewardsForTokensPaths calldata _data,
+        uint256 _preClaimRewardsBalance
+    ) public payable override onlyOwner returns (uint256[] memory) {
+        if (hasNativeReward) {
+            // we want to retain pre reward balance for executing txn's
+            uint256 amount = address(this).balance - _preClaimRewardsBalance;
+            IWrappedToken(address(rewardTokenB)).deposit{value: amount}();
+        }
+
         RewardsForTokensPaths calldata data = _data;
         address rewardToken = data.tokenAPath[0];
         uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(this));
-        uint256 allotedRewardBalance = rewardToken == address(rewardTokenA) 
-            ? rewardBalance.mul(ONE_HUNDRED_PERCENT.sub(rewardASavingsRate)).div(ONE_HUNDRED_PERCENT)
-            : rewardBalance.mul(ONE_HUNDRED_PERCENT.sub(rewardBSavingsRate)).div(ONE_HUNDRED_PERCENT);
+        uint256 allotedRewardBalance = rewardToken == address(rewardTokenA)
+            ? rewardBalance
+            .mul(ONE_HUNDRED_PERCENT.sub(rewardASavingsRate))
+            .div(ONE_HUNDRED_PERCENT)
+            : rewardBalance
+            .mul(ONE_HUNDRED_PERCENT.sub(rewardBSavingsRate))
+            .div(ONE_HUNDRED_PERCENT);
 
         // approve reward token spend by the router for this txn
-        IERC20(rewardToken).approve(
-            address(router),
-            allotedRewardBalance
-        );
+        IERC20(rewardToken).approve(address(router), allotedRewardBalance);
 
         uint256 splitRewardsBalance = allotedRewardBalance.div(2);
 
