@@ -5,6 +5,7 @@ import {
   useMediaQuery,
 } from "@material-ui/core";
 import { useMemo } from "react";
+import { Web3ContextProvider } from "../hooks/web3Context";
 import { Farmer } from "./Farmer";
 
 function App() {
@@ -27,10 +28,12 @@ function App() {
     [prefersDarkMode]
   );
   return (
-    <ThemeProvider theme={theme}>
+    <Web3ContextProvider>
+      <ThemeProvider theme={theme}>
         <Farmer />
-      <CssBaseline />
-    </ThemeProvider>
+        <CssBaseline />
+      </ThemeProvider>
+    </Web3ContextProvider>
   );
 }
 

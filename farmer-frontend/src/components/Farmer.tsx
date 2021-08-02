@@ -16,7 +16,8 @@ import {
   useLocation,
 } from "react-router-dom";
 import Nav from "./Nav";
-import { ILandingProps, Landing } from "./Landing";
+import { Landing } from "./Landing";
+import { useWeb3Context } from "../hooks/web3Context";
 
 const checkHasVisited = () => {
   try {
@@ -26,17 +27,7 @@ const checkHasVisited = () => {
   }
 };
 
-interface IConnectInfo {
-  chainId: string;
-}
-
-const Router = ({
-  chainID,
-  user,
-}: {
-  chainID: number | null;
-  user: string;
-}) => {
+const Router = () => {
   const [existingContracts, setExistingContracts] =
     useState<IExistingContracts | null>(null);
   const [farmer, setFarmer] = useState<SushiFarmer | undefined>();
@@ -47,6 +38,8 @@ const Router = ({
   >([]);
   const history = useHistory();
   const location = useLocation();
+
+  const { user, chainID } = useWeb3Context();
 
   const isUserOwnerOfContract = owner === user && user !== "";
 
@@ -87,7 +80,7 @@ const Router = ({
   }, [history, location.pathname]);
 
   const addExistingFarmer = async (farmerAddress: string) => {
-    if (!farmerAddress.trim() || !chainID) return;
+    if (!farmerAddress || !farmerAddress.trim() || !chainID) return;
     const isAddress = ethers.utils.isAddress(farmerAddress);
     if (!isAddress) {
       return;
@@ -145,61 +138,12 @@ interface IExistingLPPosition {
 }
 
 export const Farmer = () => {
-  const [chainID, setChainID] = useState<number | null>(null);
-  const [user, setUser] = useState("");
-
-  /** Get existing LP positions on the current chain. */
-  useEffect(() => {
-    if (!chainID) return;
-    (async () => {
-      // const existingLPPositions = await getExistingLPPositions();
-      // setExistingLpPositions(existingLPPositions)
-    })();
-  }, [chainID]);
-
-  useEffect(() => {
-    if (isGlobalEthereumObjectEmpty) return;
-    (window as any).ethereum.on("chainChanged", (chainId: number) => {
-      setChainID(chainId);
-    });
-
-    return () => {
-      (window as any).ethereum.removeListener("chainChanged", () => {});
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isGlobalEthereumObjectEmpty) return;
-    (window as any).ethereum.on("connect", (connectInfo: any) => {
-      setChainID(parseInt(connectInfo.chainId));
-    });
-
-    return () => {
-      (window as any).ethereum.removeListener("connect", () => {});
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isGlobalEthereumObjectEmpty) return;
-    (window as any).ethereum.on("accountsChanged", (accounts: string[]) => {
-      setUser(accounts[0]);
-    });
-
-    return () => {
-      (window as any).ethereum.removeListener("accountsChanged", () => {});
-    };
-  }, []);
-
-  const createFarmer = () => {
-    // TODO: create a new farmer contract where the user is the creator of the contract.
-  };
-
   return (
     <div>
       <BrowserRouter>
-        <Nav userAddress={user} setUserAddress={(x) => setUser(x)} />
+        <Nav />
         <Container>
-          <Router chainID={chainID} user={user} />
+          <Router />
         </Container>
       </BrowserRouter>
     </div>

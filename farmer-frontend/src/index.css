@@ -30,12 +30,6 @@ code {
 .nav-button {
   height: 45px;
 }
-.nav-eth-data {
-  display: flex;
-}
-.eth-address {
-  margin-left: 1rem;
-}
 
 .landing-page-title-container {
   display: flex;  

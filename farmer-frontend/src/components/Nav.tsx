@@ -1,24 +1,11 @@
 import { AppBar, Button, Toolbar, Typography } from "@material-ui/core";
 import { Link } from "react-router-dom";
-import { Blockie, EthAddress } from "rimble-ui";
 import farmer from "../farmer.png";
+import { useWeb3Context } from "../hooks/web3Context";
 import { requestAccount } from "../utils/helpers";
 
-const Nav = ({
-  userAddress,
-  setUserAddress,
-}: {
-  userAddress: string;
-  setUserAddress: (x: string) => void;
-}) => {
-  const handleRequestAccount = async () => {
-    try {
-      const result = await requestAccount();
-      setUserAddress(result[0].toLowerCase());
-    } catch (err) {
-      console.error(err);
-    }
-  };
+const Nav = () => {
+  const { connected, connect, disconnect } = useWeb3Context();
 
   return (
     <AppBar position="static">
@@ -30,21 +17,23 @@ const Nav = ({
             farmer
           </Typography>
         </div>
-        {userAddress === "" && (
+        {!connected && (
           <Button
             className="button nav-button"
             variant="contained"
-            onClick={() => handleRequestAccount()}
+            onClick={connect}
           >
             Connect Wallet
           </Button>
         )}
-        {userAddress !== "" && (
-          <div className="nav-eth-data">
-            <Blockie address={userAddress} />
-            <EthAddress className="eth-address" address={userAddress} />
-          </div>
-        )}
+        {connected && 
+          <Button
+            className="button nav-button"
+            variant="contained"
+            onClick={disconnect}
+          >
+            Disconnect
+          </Button>}
       </Toolbar>
     </AppBar>
   );
