@@ -43,6 +43,7 @@
   "devDependencies": {
     "@emotion/react": "^11.4.0",
     "@emotion/styled": "^11.3.0",
+    "@ethersproject/providers": "^5.4.3",
     "@material-ui/core": "^5.0.0-beta.2",
     "@types/react-router-dom": "^5.1.8",
     "ethers": "^5.4.1",

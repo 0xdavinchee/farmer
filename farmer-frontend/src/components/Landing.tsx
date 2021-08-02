@@ -6,7 +6,7 @@ const ADDRESS_LENGTH = 42;
 
 export interface ILandingProps {
   readonly farmerAddress: string;
-  readonly createFarmer: () => void;
+  readonly createFarmer: () => Promise<void>;
   readonly setFarmerAddress: (address: string) => void;
 }
 
@@ -35,7 +35,7 @@ export const Landing = ({
           color="primary"
           disabled={farmerAddress.length < ADDRESS_LENGTH || isInvalidAddress}
           variant="contained"
-          onClick={createFarmer}
+          onClick={() => createFarmer()}
         >
           <Typography variant="body1">create</Typography>
         </Button>
