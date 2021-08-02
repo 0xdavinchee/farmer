@@ -28,12 +28,10 @@ function App() {
     [prefersDarkMode]
   );
   return (
-    <Web3ContextProvider>
-      <ThemeProvider theme={theme}>
-        <Farmer />
-        <CssBaseline />
-      </ThemeProvider>
-    </Web3ContextProvider>
+    <ThemeProvider theme={theme}>
+      <Farmer />
+      <CssBaseline />
+    </ThemeProvider>
   );
 }
 
