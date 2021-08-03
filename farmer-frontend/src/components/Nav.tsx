@@ -2,7 +2,6 @@ import { AppBar, Button, Toolbar, Typography } from "@material-ui/core";
 import { Link } from "react-router-dom";
 import farmer from "../farmer.png";
 import { useWeb3Context } from "../hooks/web3Context";
-import { requestAccount } from "../utils/helpers";
 
 const Nav = () => {
   const { connected, connect, disconnect } = useWeb3Context();
@@ -26,14 +25,15 @@ const Nav = () => {
             Connect Wallet
           </Button>
         )}
-        {connected && 
+        {connected && (
           <Button
             className="button nav-button"
             variant="contained"
             onClick={disconnect}
           >
             Disconnect
-          </Button>}
+          </Button>
+        )}
       </Toolbar>
     </AppBar>
   );

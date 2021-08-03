@@ -57,3 +57,12 @@ code {
   margin-top: 1.5rem !important;
   margin-bottom: 1rem !important;
 }
+
+.farms-container {
+  margin-top: 2rem;
+}
+.toggle-pools {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}

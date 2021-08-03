@@ -10,7 +10,7 @@ export interface ILandingProps {
   readonly setFarmerAddress: (address: string) => void;
 }
 
-export const Landing = ({
+export const AddFarmer = ({
   farmerAddress,
   createFarmer,
   setFarmerAddress,

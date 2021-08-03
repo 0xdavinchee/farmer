@@ -1,12 +1,9 @@
-import { Button, Container, TextField, Typography } from "@material-ui/core";
+import { Button, Container } from "@material-ui/core";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { SushiFarmer } from "../typechain";
 import { ContractType, PATH, Storage } from "../utils/constants";
-import {
-  initializeContract,
-  isGlobalEthereumObjectEmpty,
-} from "../utils/helpers";
+import { initializeContract } from "../utils/helpers";
 import { IExistingContracts } from "../utils/interface";
 import {
   BrowserRouter,
@@ -16,8 +13,9 @@ import {
   useLocation,
 } from "react-router-dom";
 import Nav from "./Nav";
-import { Landing } from "./Landing";
+import { AddFarmer } from "./AddFarmer";
 import { useWeb3Context } from "../hooks/web3Context";
+import { Farms } from "../views/Farms";
 
 const checkHasVisited = () => {
   try {
@@ -117,14 +115,14 @@ const Router = () => {
   return (
     <Switch>
       <Route path={PATH.Landing} exact>
-        <Landing
+        <AddFarmer
           farmerAddress={farmerAddress}
           createFarmer={() => addExistingFarmer(farmerAddress)}
           setFarmerAddress={(x) => setFarmerAddress(x)}
         />
       </Route>
       <Route path={PATH.Home} exact>
-        <Button onClick={testStuff}>Test</Button>
+        <Farms />
       </Route>
     </Switch>
   );

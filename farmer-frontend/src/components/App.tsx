@@ -23,6 +23,9 @@ function App() {
           body1: {
             fontSize: "1.2rem",
           },
+          button: {
+            fontSize: "1.2rem",
+          },
         },
       }),
     [prefersDarkMode]
