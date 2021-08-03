@@ -16,6 +16,9 @@ import Nav from "./Nav";
 import { AddFarmer } from "./AddFarmer";
 import { useWeb3Context } from "../hooks/web3Context";
 import { Farms } from "../views/Farms";
+import { useMiniChefFarms, useMiniChefPairAddresses } from "../graph/hooks";
+import { getMiniChefFarms } from "../graph/fetchers/minichef";
+import { ChainId } from "@sushiswap/sdk";
 
 const checkHasVisited = () => {
   try {
@@ -40,6 +43,8 @@ const Router = () => {
   const { user, chainID } = useWeb3Context();
 
   const isUserOwnerOfContract = owner === user && user !== "";
+
+  const farms = useMiniChefFarms();
 
   // we can store the contract addresses in localStorage, but we can also query events
   // and get all contracts created by the user (v2)

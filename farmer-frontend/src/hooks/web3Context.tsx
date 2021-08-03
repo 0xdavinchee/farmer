@@ -87,6 +87,7 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
   };
 
   useEffect(() => {
+    if (!provider) return;
     provider.on("chainChanged", (chainId: number) => {
       setChainID(chainId);
     });
@@ -94,19 +95,22 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
     return () => {
       provider.removeListener("chainChanged", () => {});
     };
-  }, []);
+  }, [provider]);
 
   useEffect(() => {
+    if (!provider) return;
     provider.on("connect", (connectInfo: any) => {
+      console.log("hello");
       setChainID(parseInt(connectInfo.chainId));
     });
 
     return () => {
       provider.removeListener("connect", () => {});
     };
-  }, []);
+  }, [provider]);
 
   useEffect(() => {
+    if (!provider) return;
     provider.on("accountsChanged", (accounts: string[]) => {
       setUser(accounts[0]);
     });
@@ -114,7 +118,7 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
     return () => {
       provider.removeListener("accountsChanged", () => {});
     };
-  }, []);
+  }, [provider]);
 
   const connect = useCallback(async () => {
     const rawProvider = await web3Modal.connect();

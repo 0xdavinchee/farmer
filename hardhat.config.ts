@@ -1,4 +1,4 @@
-import { HardhatUserConfig, task } from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/config";
 import { config as dotEnvConfig } from "dotenv";
 dotEnvConfig();
 import "hardhat-deploy";
