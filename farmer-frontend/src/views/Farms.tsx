@@ -8,7 +8,11 @@ import {
 import { ChainId } from "@sushiswap/sdk";
 import { useState } from "react";
 import { Chef, PairType } from "../enum";
-import { useMiniChefFarms, useMiniChefPairAddresses } from "../graph/hooks";
+import {
+  useMiniChefFarms,
+  useMiniChefPairAddresses,
+} from "../graph/hooks";
+import { useAverageBlockTime } from "../graph/hooks/blocks";
 import { useSushiPairs } from "../graph/hooks/exchange";
 
 export const Farms = () => {
@@ -22,6 +26,12 @@ export const Farms = () => {
       id_in: pairAddresses,
     },
   });
+
+  const toNum = (x: string) => {
+      return Number(x);
+  }
+
+  const averageBlockTime = useAverageBlockTime();
 
   return (
     <Container maxWidth="md" className="farms-container">

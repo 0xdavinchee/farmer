@@ -1,33 +1,6 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { getPairs } from "../fetchers/exchange";
 
-export interface IExchangePair {
-  id: string;
-  token0: IExchangeToken;
-  token1: IExchangeToken;
-  reserve0: string;
-  reserve1: string;
-  totalSupply: string;
-  reserveETH: string;
-  reserveUSD: string;
-  trackedReserveETH: string;
-  token0Price: string;
-  token1Price: string;
-  volumeToken0: string;
-  volumeToken1: string;
-  volumeUSD: string;
-  untrackedVolumeUSD: string;
-  txCount: string;
-}
-
-export interface IExchangeToken {
-  id: string;
-  name: string;
-  symbol: string;
-  totalSupply: string;
-  derivedETH: string;
-}
-
 export function useSushiPairs(
   variables: any,
   query?: any,
@@ -41,5 +14,5 @@ export function useSushiPairs(
     (_, chainId) => getPairs(chainId, variables, query),
     swrConfig
   );
-  return data as IExchangePair[];
+  return data;
 }
