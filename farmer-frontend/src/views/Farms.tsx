@@ -1,5 +1,4 @@
 import {
-  Button,
   Container,
   ToggleButton,
   ToggleButtonGroup,
@@ -8,18 +7,27 @@ import {
 import { ChainId } from "@sushiswap/sdk";
 import { useState } from "react";
 import { Chef, PairType } from "../enum";
-import {
-  useMiniChefFarms,
-  useMiniChefPairAddresses,
-} from "../graph/hooks";
+import { IMiniChefFarmData } from "../graph/fetchers/minichef";
+import { useMiniChefFarms, useMiniChefPairAddresses } from "../graph/hooks";
 import { useAverageBlockTime } from "../graph/hooks/blocks";
-import { useSushiPairs } from "../graph/hooks/exchange";
+import {
+  useMaticPrice,
+  useOnePrice,
+  useStakePrice,
+  useSushiPairs,
+  useSushiPrice,
+} from "../graph/hooks/exchange";
+import { useWeb3Context } from "../hooks/web3Context";
+import { toNum } from "../utils/helpers";
 
 export const Farms = () => {
   const [myPools, setMyPools] = useState(true);
+  //   const { chainID } = useWeb3Context();
+  const chainID = 100;
 
   const pairAddresses = useMiniChefPairAddresses();
   const farms = useMiniChefFarms();
+//   const positions = usePositions();
 
   const swapPairs = useSushiPairs({
     where: {
@@ -27,11 +35,136 @@ export const Farms = () => {
     },
   });
 
-  const toNum = (x: string) => {
-      return Number(x);
-  }
-
   const averageBlockTime = useAverageBlockTime();
+  const [sushiPrice, maticPrice, stakePrice, onePrice] = [
+    useSushiPrice(),
+    useMaticPrice(),
+    useStakePrice(),
+    useOnePrice(),
+  ];
+
+  const blocksPerDay = 86400 / Number(averageBlockTime);
+
+  const map = (pool: IMiniChefFarmData) => {
+    const swapPair = swapPairs.find((pair) => pair.id === pool.pair);
+
+    const type = PairType.SWAP;
+
+    const pair = swapPair;
+
+    const blocksPerHour = 3600 / averageBlockTime;
+
+    function getRewards() {
+      const mcSushiPerSecond = toNum(pool.miniChef.sushiPerSecond);
+      const allocPoint = toNum(pool.allocPoint);
+      const totalAllocPoint = toNum(pool.miniChef.totalAllocPoint);
+      const sushiPerBlock = (mcSushiPerSecond / 1e18) * averageBlockTime;
+
+      const rewardPerBlock = (allocPoint / totalAllocPoint) * sushiPerBlock;
+
+      const defaultReward = {
+        token: "SUSHI",
+        icon: "https://raw.githubusercontent.com/sushiswap/icons/master/token/sushi.jpg",
+        rewardPerBlock,
+        rewardPerDay: rewardPerBlock * blocksPerDay,
+        rewardPrice: sushiPrice,
+      };
+
+      const defaultRewards = [defaultReward];
+
+      if (pool.chef === Chef.MINICHEF) {
+        const sushiPerSecond =
+          ((allocPoint / totalAllocPoint) * mcSushiPerSecond) / 1e18;
+        const sushiPerBlock = sushiPerSecond * averageBlockTime;
+        const sushiPerDay = sushiPerBlock * blocksPerDay;
+        const rewardPerSecond =
+          ((allocPoint / totalAllocPoint) *
+            toNum(pool.rewarder.rewardPerSecond)) /
+          1e18;
+        const rewardPerBlock = rewardPerSecond * averageBlockTime;
+        const rewardPerDay = rewardPerBlock * blocksPerDay;
+
+        const reward: {
+          [key: number]: { token: string; icon: string; rewardPrice: string };
+        } = {
+          [ChainId.MATIC]: {
+            token: "MATIC",
+            icon: "https://raw.githubusercontent.com/sushiswap/icons/master/token/polygon.jpg",
+            rewardPrice: maticPrice,
+          },
+          [ChainId.XDAI]: {
+            token: "STAKE",
+            icon: "https://raw.githubusercontent.com/sushiswap/icons/master/token/stake.jpg",
+            rewardPrice: stakePrice,
+          },
+          [ChainId.HARMONY]: {
+            token: "ONE",
+            icon: "https://raw.githubusercontent.com/sushiswap/icons/master/token/one.jpg",
+            rewardPrice: onePrice,
+          },
+        };
+
+        return [
+          {
+            ...defaultReward,
+            rewardPerBlock: sushiPerBlock,
+            rewardPerDay: sushiPerDay,
+          },
+          {
+            ...reward[chainID],
+            rewardPerBlock: rewardPerBlock,
+            rewardPerDay: rewardPerDay,
+          },
+        ];
+      }
+      return defaultRewards;
+    }
+
+    const rewards = getRewards();
+
+    const balance = toNum(toNum(pool.slpBalance) / 1e18);
+
+    const tvl = swapPair
+      ? (balance / Number(swapPair.totalSupply)) * Number(swapPair.reserveUSD)
+      : 0;
+
+    const roiPerBlock =
+      rewards.reduce((previousValue, currentValue) => {
+        return (
+          previousValue + currentValue.rewardPerBlock * currentValue.rewardPrice
+        );
+      }, 0) / tvl;
+
+    const roiPerHour = roiPerBlock * blocksPerHour;
+
+    const roiPerDay = roiPerHour * 24;
+
+    const roiPerMonth = roiPerDay * 30;
+
+    const roiPerYear = roiPerMonth * 12;
+
+    // const position = [positions].find(
+    //   (position) => position.id === pool.id && position.chef === pool.chef
+    // );
+
+    return {
+      ...pool,
+    //   ...position,
+      pair: {
+        ...pair,
+        decimals: 18,
+        type,
+      },
+      balance,
+      roiPerBlock,
+      roiPerHour,
+      roiPerDay,
+      roiPerMonth,
+      roiPerYear,
+      rewards,
+      tvl,
+    };
+  };
 
   return (
     <Container maxWidth="md" className="farms-container">

@@ -3,6 +3,7 @@ import { ChainId } from "@sushiswap/sdk";
 import { GRAPH_HOST } from "../constants";
 import { request } from "graphql-request";
 import { blocksQuery } from "../queries/blocks";
+import { toNum } from "../../utils/helpers";
 
 export const BLOCKS: { [key: number]: string } = {
   [ChainId.MAINNET]: "blocklytics/ethereum-blocks",
@@ -15,11 +16,11 @@ export const BLOCKS: { [key: number]: string } = {
   [ChainId.CELO]: "sushiswap/celo-blocks",
 };
 
-interface IBlock {
+export interface IBlock {
   readonly id: string;
-  readonly averageBlockTime?: number;
+  averageBlockTime?: number;
   readonly number: string;
-  readonly timestamp: string;
+  timestamp: string;
 }
 
 interface IResponse<T> {
@@ -56,25 +57,26 @@ export const getAverageBlockTime = async (chainId = ChainId.MAINNET) => {
   const start = getUnixTime(subHours(now, 6));
   const end = getUnixTime(now);
   const blocks = await getBlocks(chainId, start, end);
-  const averageBlockTime = blocks?.reduce(
-    (previousValue: any, currentValue: any, currentIndex: number) => {
+  const averageBlockTime = blocks.reduce(
+    (previousValue: IBlock, currentValue: IBlock, currentIndex: number) => {
       if (previousValue.timestamp) {
-        const difference = previousValue.timestamp - currentValue.timestamp;
+        const difference =
+          toNum(previousValue.timestamp) - toNum(currentValue.timestamp);
 
         previousValue.averageBlockTime =
-          previousValue.averageBlockTime + difference;
+          toNum(previousValue.averageBlockTime || 0) + difference;
       }
 
       previousValue.timestamp = currentValue.timestamp;
 
       if (currentIndex === blocks.length - 1) {
-        return previousValue.averageBlockTime / blocks.length;
+        return toNum(previousValue.averageBlockTime || 0) / blocks.length;
       }
 
-      return previousValue;
+      return previousValue as any;
     },
-    { timestamp: null, averageBlockTime: 0 }
-  );
+    { timestamp: null, averageBlockTime: 0 } as any
+  ) as unknown as number;
 
   return averageBlockTime;
 };

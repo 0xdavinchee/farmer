@@ -1,4 +1,4 @@
-import { ethers } from "ethers";
+import { BigNumberish, ethers } from "ethers";
 import { JsonRpcProvider } from "@ethersproject/providers";
 import { SushiFarmer } from "../typechain";
 import { ContractType, contractTypeToArtifactMap } from "./constants";
@@ -42,3 +42,7 @@ export const initializeContract = async (
 
   return contract;
 };
+
+export const toNum = (x: BigNumberish) => {
+  return Number(x);
+}

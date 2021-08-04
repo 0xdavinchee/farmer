@@ -54,3 +54,28 @@ export const pairsQuery = gql`
   }
   ${pairFieldsQuery}
 `;
+
+export const bundleFields = gql`
+  fragment bundleFields on Bundle {
+    id
+    ethPrice
+  }
+`;
+
+export const ethPriceQuery = gql`
+  query ethPriceQuery($id: Int! = 1, $block: Block_height) {
+    bundles(id: $id, block: $block) {
+      ...bundleFields
+    }
+  }
+  ${bundleFields}
+`;
+
+export const tokenPriceQuery = gql`
+  query tokenPriceQuery($id: String!) {
+    token(id: $id) {
+      id
+      derivedETH
+    }
+  }
+`;
