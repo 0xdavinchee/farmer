@@ -5,10 +5,24 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@material-ui/core";
+import { ChainId } from "@sushiswap/sdk";
 import { useState } from "react";
+import { Chef, PairType } from "../enum";
+import { useMiniChefFarms, useMiniChefPairAddresses } from "../graph/hooks";
+import { useSushiPairs } from "../graph/hooks/exchange";
 
 export const Farms = () => {
   const [myPools, setMyPools] = useState(true);
+
+  const pairAddresses = useMiniChefPairAddresses();
+  const farms = useMiniChefFarms();
+
+  const swapPairs = useSushiPairs({
+    where: {
+      id_in: pairAddresses,
+    },
+  });
+
   return (
     <Container maxWidth="md" className="farms-container">
       <div className="toggle-pools">
