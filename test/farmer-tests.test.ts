@@ -137,13 +137,11 @@ describe("Polygon SushiFarmer Tests", function () {
       params: [whale],
     });
 
-    (SushiFarmer = (await ethers.getContract(
-      "SushiFarmer"
-    )) as unknown as SushiFarmer),
-      (SushiRouter = (await ethers.getContractAt(
+    (SushiFarmer = await ethers.getContract<SushiFarmer>("SushiFarmer")),
+      (SushiRouter = await ethers.getContractAt<IUniswapV2Router02>(
         RouterABI,
         ADDRESS[ChainId].SUSHI_ROUTER
-      )) as IUniswapV2Router02),
+      )),
       // whale is owner of sushifarmer
       await SushiFarmer.setOwner(whale);
     WhaleSigner = await ethers.getSigner(whale);

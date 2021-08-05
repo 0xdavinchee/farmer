@@ -44,35 +44,29 @@ export const setup = async (data: ISetupProps) => {
 
   const contracts = {
     // these contracts will always have the same addresses
-    ComplexRewardTimer: (await ethers.getContractAt(
+    ComplexRewardTimer: await ethers.getContractAt<IComplexRewardTimer>(
       ComplexRewardTimerABI,
       ADDRESS[data.chainId].COMPLEX_REWARD_TIMER
-    )) as IComplexRewardTimer,
-    MiniChef: (await ethers.getContractAt(
+    ),
+    MiniChef: await ethers.getContractAt<IMiniChefV2>(
       ChefABI,
       ADDRESS[data.chainId].MINI_CHEF
-    )) as IMiniChefV2,
+    ),
 
     // reward tokens
-    RewardTokenA: (await ethers.getContractAt(
-      ERC20ABI,
-      rewardTokenA
-    )) as IERC20,
-    RewardTokenB: (await ethers.getContractAt(
-      ERC20ABI,
-      rewardTokenB
-    )) as IERC20,
+    RewardTokenA: await ethers.getContractAt<IERC20>(ERC20ABI, rewardTokenA),
+    RewardTokenB: await ethers.getContractAt<IERC20>(ERC20ABI, rewardTokenB),
 
     // these contract addresses will vary
-    V2Pair: (await ethers.getContractAt(PairABI, pair)) as IUniswapV2Pair,
-    IndependentToken: (await ethers.getContractAt(
+    V2Pair: await ethers.getContractAt<IUniswapV2Pair>(PairABI, pair),
+    IndependentToken: await ethers.getContractAt<IERC20>(
       ERC20ABI,
       independentToken
-    )) as IERC20,
-    DependentToken: (await ethers.getContractAt(
+    ),
+    DependentToken: await ethers.getContractAt<IERC20>(
       ERC20ABI,
       dependentToken
-    )) as IERC20,
+    ),
   };
 
   const setupObject = {
