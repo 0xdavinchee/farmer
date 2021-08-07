@@ -3,23 +3,23 @@ import UniswapRouterArtifact from "../artifacts/@sushiswap/core/contracts/uniswa
 import UniswapV2PairArtifact from "../artifacts/@sushiswap/core/contracts/uniswapv2/interfaces/IUniswapV2Pair.sol/IUniswapV2Pair.json";
 
 export enum ContractType {
-  SushiFarmer = "SUSHI_FARMER",
-  UniswapV2Pair = "UNISWAP_V2_PAIR",
-  UniswapRouter = "UNISWAP_ROUTER",
+    SushiFarmer = "SUSHI_FARMER",
+    UniswapV2Pair = "UNISWAP_V2_PAIR",
+    UniswapRouter = "UNISWAP_ROUTER",
 }
 
 export enum Storage {
-  ContractAddresses = "CONTRACT_ADDRESSES",
-  HasVisited = "HAS_VISITED",
+    ContractAddresses = "CONTRACT_ADDRESSES",
+    HasVisited = "HAS_VISITED",
 }
 
 export const contractTypeToArtifactMap = new Map([
-  [ContractType.SushiFarmer, SushiFarmerArtifact.abi],
-  [ContractType.UniswapRouter, UniswapRouterArtifact.abi],
-  [ContractType.UniswapV2Pair, UniswapV2PairArtifact.abi],
+    [ContractType.SushiFarmer, SushiFarmerArtifact.abi],
+    [ContractType.UniswapRouter, UniswapRouterArtifact.abi],
+    [ContractType.UniswapV2Pair, UniswapV2PairArtifact.abi],
 ]);
 
 export const PATH = {
-  Landing: "/",
-  Home: "/farm",
+    Landing: "/",
+    Home: "/farm",
 };

@@ -6,13 +6,12 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
+
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
-
-
 
 <!-- PROJECT LOGO -->
 <br />
@@ -46,8 +45,6 @@
   </p>
 </p>
 
-
-
 <!-- TABLE OF CONTENTS -->
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
@@ -71,9 +68,8 @@
   </ol>
 </details>
 
-
-
 <!-- ABOUT THE PROJECT -->
+
 ## About The Project
 
 <!-- [![Product Name Screen Shot][product-screenshot]](https://example.com) -->
@@ -82,11 +78,10 @@ A collection of farming contracts which will be used to optimize yield.
 
 ### Built With
 
-* [hardhat](https://hardhat.org)
-
-
+-   [hardhat](https://hardhat.org)
 
 <!-- GETTING STARTED -->
+
 ## Getting Started
 
 To get a local copy up and running follow these simple steps.
@@ -94,35 +89,35 @@ To get a local copy up and running follow these simple steps.
 ### Prerequisites
 
 You just need to have npm to use this project.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+
+-   npm
+    ```sh
+    npm install npm@latest -g
+    ```
 
 ### Installation
 
 1. Clone the repo
-   ```sh
-   git clone https://github.com/0xdavinchee/farmer-frontend.git
-   ```
+    ```sh
+    git clone https://github.com/0xdavinchee/farmer-frontend.git
+    ```
 2. Install NPM packages
-   ```sh
-   yarn install
-   ```
-
-
+    ```sh
+    yarn install
+    ```
 
 <!-- USAGE EXAMPLES -->
+
 ## Usage
 
 <!-- LICENSE -->
+
 ## License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-
-
 <!-- CONTACT -->
+
 ## Contact
 
 0xdavinchee - [@0xdavinchee](https://twitter.com/0xdavinchee) - 0xdavinchee@gmail.com
@@ -131,6 +126,7 @@ Project Link: [https://github.com/0xdavinchee/farmer-frontend](https://github.co
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
+
 [contributors-shield]: https://img.shields.io/github/contributors/0xdavinchee/farmer-frontend.svg?style=for-the-badge
 [contributors-url]: https://github.com/0xdavinchee/farmer-frontend/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/0xdavinchee/farmer-frontend.svg?style=for-the-badge

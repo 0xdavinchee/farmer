@@ -4,20 +4,20 @@ import { ADDRESS } from "../test/utils/constants";
 import { ChainId } from "@sushiswap/sdk";
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployments, getNamedAccounts } = hre;
-  const { deployer } = await getNamedAccounts();
-  const { deploy } = deployments;
+    const { deployments, getNamedAccounts } = hre;
+    const { deployer } = await getNamedAccounts();
+    const { deploy } = deployments;
 
-  await deploy("SushiFarmer", {
-    from: deployer,
-    args: [
-      process.env.MINI_CHEF_V2_ADDRESS,
-      ADDRESS[ChainId.MATIC].SUSHI,
-      ADDRESS[ChainId.MATIC].WMATIC,
-      false,
-    ],
-    log: true,
-  });
+    await deploy("SushiFarmer", {
+        from: deployer,
+        args: [
+            process.env.MINI_CHEF_V2_ADDRESS,
+            ADDRESS[ChainId.MATIC].SUSHI,
+            ADDRESS[ChainId.MATIC].WMATIC,
+            false,
+        ],
+        log: true,
+    });
 };
 
 export default func;

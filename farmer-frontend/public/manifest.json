@@ -1,20 +1,20 @@
 {
-  "short_name": "Farmer",
-  "name": "Farmer Frontend",
-  "icons": [
-    {
-      "src": "logo64.png",
-      "sizes": "64x65",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x196"
-    }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+    "short_name": "Farmer",
+    "name": "Farmer Frontend",
+    "icons": [
+        {
+            "src": "logo64.png",
+            "sizes": "64x65",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "logo192.png",
+            "type": "image/png",
+            "sizes": "192x196"
+        }
+    ],
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#000000",
+    "background_color": "#ffffff"
 }
