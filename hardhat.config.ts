@@ -80,6 +80,9 @@ const config: HardhatUserConfig = {
     mocha: {
         timeout: 250000,
     },
+    paths: {
+        artifacts: "./farmer-frontend/src/artifacts"
+    },
 };
 
 export default config;

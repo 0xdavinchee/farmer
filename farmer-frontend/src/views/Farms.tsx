@@ -6,6 +6,7 @@ import {
 } from "@material-ui/core";
 import { ChainId } from "@sushiswap/sdk";
 import { useState } from "react";
+import { DataContainer, IData } from "../components/DataContainer";
 import { Chef, PairType } from "../enum";
 import { IMiniChefFarmData } from "../graph/fetchers/minichef";
 import { useMiniChefFarms, useMiniChefPairAddresses } from "../graph/hooks";
@@ -164,7 +165,7 @@ export const Farms = () => {
             roiPerYear,
             rewards,
             tvl,
-        };
+        } as IData;
     };
 
     const data = farms
@@ -172,9 +173,7 @@ export const Farms = () => {
             return swapPairs.find((pair) => pair.id === farm.pair);
         })
         .map(map);
-	console.log("farms", farms);
-	console.log("data", data);
-	console.log("swapPairs", swapPairs);
+    console.log("data", data);
     return (
         <Container maxWidth="md" className="farms-container">
             <div className="toggle-pools">
@@ -182,15 +181,16 @@ export const Farms = () => {
                     color="primary"
                     value={myPools}
                     exclusive
-                    onChange={(_e, val) => setMyPools(val)}
+                    onChange={(_e, val) => {
+                        val != null && setMyPools(val);
+                    }}
                 >
                     <ToggleButton value={true}>My Pools</ToggleButton>
                     <ToggleButton value={false}>All Pools</ToggleButton>
                 </ToggleButtonGroup>
             </div>
             <Typography variant="h4">Sushiswap</Typography>
-
-            <Typography variant="h4">Quickswap</Typography>
+            <DataContainer data={data} />
         </Container>
     );
 };

@@ -12,6 +12,25 @@ export const MINICHEF: { [key: number]: string } = {
     [ChainId.HARMONY]: "sushiswap/harmony-minichef",
 };
 
+export interface IMiniChefFarmDataLight {
+    readonly accSushiPerShare: string;
+    readonly allocPoint: string;
+    readonly chef?: number;
+    readonly lastRewardTime: string;
+    readonly miniChef: {
+        readonly id: string;
+        readonly sushiPerSecond: string;
+        readonly totalAllocPoint: string;
+    };
+    readonly rewarder: {
+        readonly id: string;
+        readonly rewardPerSecond: string;
+        readonly rewardToken: string;
+    };
+    readonly slpBalance: string;
+    readonly userCount: string;
+}
+
 export interface IMiniChefFarmData {
     readonly accSushiPerShare: string;
     readonly allocPoint: string;

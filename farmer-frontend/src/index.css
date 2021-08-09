@@ -66,3 +66,20 @@ code {
   justify-content: center;
   margin-bottom: 1.5rem;
 }
+.reward-container {
+  display: flex;
+  align-items: center;
+}
+.reward-icon {
+  height: 1.25rem;
+  margin-right: 0.5rem;
+}
+.data-container {
+  margin: 1rem 0;
+}
+.swap-pair {
+  margin-bottom: 1rem;
+}
+.swap-pair-content {
+  display: flex;
+}
