@@ -1,4 +1,4 @@
-import { Button, Container } from "@material-ui/core";
+import { Container } from "@material-ui/core";
 import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { SushiFarmer } from "../typechain";
@@ -119,6 +119,12 @@ const Router = () => {
         console.log(owner);
     };
 
+	const handleSave = async () => {
+		// if (farmerAddress !== localstorageFarmerAddress) {
+		// 	await addExistingFarmer(farmerAddress);
+		// }
+	}
+
     return (
         <Switch>
             <Route path={PATH.Landing} exact>
@@ -132,7 +138,12 @@ const Router = () => {
                 <Farms />
             </Route>
             <Route path={PATH.Settings} exact>
-                <Settings />
+                <Settings
+					farmer={farmer}
+                    farmerAddress={farmerAddress}
+                    setFarmerAddress={(x) => setFarmerAddress(x)}
+					save={() => handleSave()}
+                />
             </Route>
         </Switch>
     );

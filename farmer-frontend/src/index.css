@@ -100,3 +100,15 @@ code {
 .swap-pair-content {
   display: flex;
 }
+
+.settings {
+  display: flex !important;
+  flex-direction: column;
+}
+.settings-input {
+  margin-bottom: 1.5rem !important;
+}
+.settings-button {
+  display: flex;
+  justify-content: flex-start;
+}

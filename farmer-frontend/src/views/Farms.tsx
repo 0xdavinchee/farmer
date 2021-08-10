@@ -23,8 +23,7 @@ import { toNum } from "../utils/helpers";
 
 export const Farms = () => {
     const [myPools, setMyPools] = useState(true);
-    //   const { chainID } = useWeb3Context();
-    const chainID = 100;
+    const { chainID } = useWeb3Context();
 
     const pairAddresses = useMiniChefPairAddresses();
     const farms = useMiniChefFarms();

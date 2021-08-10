@@ -10,7 +10,6 @@ import { Farmer } from "./Farmer";
 
 function App() {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-  console.log(prefersDarkMode);
   const theme = useMemo(
     () =>
       createTheme({

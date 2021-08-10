@@ -78,7 +78,7 @@ export const DataContainer = ({ data }: { data: IData[] }) => {
                             <Typography variant="body1">Rewards</Typography>
                             <div>
                                 {x.rewards.map((x) => (
-                                    <div className="reward-container">
+                                    <div className="reward-container" key={x.token}>
                                         <img
                                             className="reward-icon"
                                             src={x.icon}

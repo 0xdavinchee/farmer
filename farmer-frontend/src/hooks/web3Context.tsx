@@ -50,7 +50,7 @@ export const useAddress = () => {
   return user;
 };
 
-// tge 
+// TODO: get provider listener on chainId change working
 export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
   children,
 }) => {
@@ -61,7 +61,7 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
     process.env.NODE_ENV === "development"
       ? "http://localhost:8545"
       : process.env.REACT_APP_INFURA_API_KEY;
-  const [provider, setProvider] = useState<JsonRpcProvider>(
+  const [provider, setProvider] = useState<StaticJsonRpcProvider>(
     new StaticJsonRpcProvider(providerUrl)
   );
 
@@ -86,48 +86,66 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
     return true;
   };
 
-  useEffect(() => {
+  // useEffect(() => {
+  //   if (!provider) return;
+  //   provider.on("chainChanged", (chainId: number) => {
+  //     console.log("ello");
+  //     setChainID(chainId);
+  //   });
+
+  //   return () => {
+  //     provider.removeListener("chainChanged", () => {});
+  //   };
+  // }, [provider]);
+
+  // useEffect(() => {
+  //   if (!provider) return;
+  //   provider.on("connect", (connectInfo: any) => {
+  //     console.log("hello");
+  //     setChainID(parseInt(connectInfo.chainId));
+  //   });
+
+  //   return () => {
+  //     provider.removeListener("connect", () => {});
+  //   };
+  // }, [provider]);
+
+  // useEffect(() => {
+  //   if (!provider) return;
+  //   provider.on("accountsChanged", (accounts: string[]) => {
+  //     setUser(accounts[0]);
+  //   });
+
+  //   return () => {
+  //     provider.removeListener("accountsChanged", () => {});
+  //   };
+  // }, [provider]);
+
+  const _initListeners = useCallback(() => {
     if (!provider) return;
-    provider.on("chainChanged", (chainId: number) => {
-      setChainID(chainId);
+
+    provider.on("accountsChanged", () => {
+      if (_hasCachedProvider()) return;
+      setTimeout(() => window.location.reload(), 1);
     });
 
-    return () => {
-      provider.removeListener("chainChanged", () => {});
-    };
-  }, [provider]);
-
-  useEffect(() => {
-    if (!provider) return;
-    provider.on("connect", (connectInfo: any) => {
-      console.log("hello");
-      setChainID(parseInt(connectInfo.chainId));
+    provider.on("chainChanged", (chain: number) => {
+      if (_hasCachedProvider()) return;
+      setChainID(chain);
+      setTimeout(() => window.location.reload(), 1);
     });
-
-    return () => {
-      provider.removeListener("connect", () => {});
-    };
   }, [provider]);
-
-  useEffect(() => {
-    if (!provider) return;
-    provider.on("accountsChanged", (accounts: string[]) => {
-      setUser(accounts[0]);
-    });
-
-    return () => {
-      provider.removeListener("accountsChanged", () => {});
-    };
-  }, [provider]);
-
   const connect = useCallback(async () => {
     const rawProvider = await web3Modal.connect();
     const connectedProvider = new Web3Provider(rawProvider);
     const connectedAddress = await connectedProvider.getSigner().getAddress();
 
+    const chainId = await connectedProvider.getNetwork().then(network => network.chainId);
+    setChainID(chainId);
     setConnected(true);
     setUser(connectedAddress);
     setProvider(connectedProvider);
+    _initListeners();
 
     return connectedProvider;
   }, [web3Modal]);
