@@ -88,7 +88,7 @@ contract SushiFarmer is
 			tokenB
 		);
 		(uint112 reserve0, uint112 reserve1, ) = IUniswapV2Pair(_pair)
-			.getReserves();
+		.getReserves();
 
 		uint256 amount0 = IERC20(token0).balanceOf(address(this));
 		uint256 amount1 = router.quote(amount0, reserve0, reserve1);
@@ -238,14 +238,14 @@ contract SushiFarmer is
 		IERC20(_token).approve(address(router), _amountTokensDesired);
 		uint256 amountTokenMin = _getMinAmount(_amountTokensDesired, _slippage);
 		(uint256 amountToken, uint256 amountWETH, uint256 liquidity) = router
-			.addLiquidityETH(
-				_token,
-				_amountTokensDesired,
-				amountTokenMin,
-				_amountETHMin,
-				address(this),
-				block.timestamp
-			);
+		.addLiquidityETH(
+			_token,
+			_amountTokensDesired,
+			amountTokenMin,
+			_amountETHMin,
+			address(this),
+			block.timestamp
+		);
 		return liquidity;
 	}
 
@@ -268,16 +268,16 @@ contract SushiFarmer is
 		IERC20(_tokenA).approve(address(router), _amountADesired);
 		IERC20(_tokenB).approve(address(router), _amountBDesired);
 		(uint256 amountA, uint256 amountB, uint256 liquidity) = router
-			.addLiquidity(
-				_tokenA,
-				_tokenB,
-				_amountADesired,
-				_amountBDesired,
-				_amountADesired,
-				_amountBDesired,
-				address(this),
-				block.timestamp
-			);
+		.addLiquidity(
+			_tokenA,
+			_tokenB,
+			_amountADesired,
+			_amountBDesired,
+			_amountADesired,
+			_amountBDesired,
+			address(this),
+			block.timestamp
+		);
 		return liquidity;
 	}
 
@@ -322,11 +322,11 @@ contract SushiFarmer is
 		uint256 rewardBalance = IERC20(rewardToken).balanceOf(address(this));
 		uint256 allotedRewardBalance = rewardToken == address(rewardTokenA)
 			? rewardBalance
-				.mul(ONE_HUNDRED_PERCENT.sub(rewardASavingsRate))
-				.div(ONE_HUNDRED_PERCENT)
+			.mul(ONE_HUNDRED_PERCENT.sub(rewardASavingsRate))
+			.div(ONE_HUNDRED_PERCENT)
 			: rewardBalance
-				.mul(ONE_HUNDRED_PERCENT.sub(rewardBSavingsRate))
-				.div(ONE_HUNDRED_PERCENT);
+			.mul(ONE_HUNDRED_PERCENT.sub(rewardBSavingsRate))
+			.div(ONE_HUNDRED_PERCENT);
 
 		// approve reward token spend by the router for this txn
 		IERC20(rewardToken).approve(address(router), allotedRewardBalance);

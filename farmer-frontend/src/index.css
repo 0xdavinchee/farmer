@@ -16,6 +16,12 @@ code {
   display: flex;
   justify-content: space-between;
 }
+.logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: white;
+}
 .logo-container {
   display: flex;
   align-items: center;
@@ -29,6 +35,17 @@ code {
 }
 .nav-button {
   height: 45px;
+}
+.link-text {
+  text-decoration: none;
+  color: #6d8cfc;
+}
+.nav-link {
+  margin-right: 2rem;
+}
+.link-text:hover {
+  opacity: 0.7;
+  transition: opacity 0.25s ease-in-out;
 }
 
 .landing-page-title-container {

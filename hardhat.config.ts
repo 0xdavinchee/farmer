@@ -81,7 +81,7 @@ const config: HardhatUserConfig = {
         timeout: 250000,
     },
     paths: {
-        artifacts: "./farmer-frontend/src/artifacts"
+        artifacts: "./farmer-frontend/src/artifacts",
     },
 };
 

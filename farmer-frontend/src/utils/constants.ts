@@ -22,4 +22,5 @@ export const contractTypeToArtifactMap = new Map([
 export const PATH = {
     Landing: "/",
     Home: "/farm",
+    Settings: "/settings",
 };
