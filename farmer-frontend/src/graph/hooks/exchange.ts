@@ -13,8 +13,7 @@ import {
 export function useStakePrice(
     swrConfig: SWRConfiguration | undefined = undefined
 ) {
-    // const { chainID } = useWeb3Context();
-    const chainID = 100;
+    const { chainID } = useWeb3Context();
     const shouldFetch = chainID && chainID === ChainId.XDAI;
     const { data } = useSWR(
         shouldFetch ? "stakePrice" : null,
@@ -28,7 +27,6 @@ export function useOnePrice(
     swrConfig: SWRConfiguration | undefined = undefined
 ) {
     const { chainID } = useWeb3Context();
-    // const chainID = 100;
     const shouldFetch = chainID && chainID === ChainId.HARMONY;
     const { data } = useSWR(
         shouldFetch ? "onePrice" : null,
@@ -42,7 +40,6 @@ export function useMaticPrice(
     swrConfig: SWRConfiguration | undefined = undefined
 ) {
     const { chainID } = useWeb3Context();
-    // const chainID = 100;
     const { data } = useSWR(
         chainID && chainID === ChainId.MATIC ? "maticPrice" : null,
         () => getMaticPrice(),
@@ -63,8 +60,7 @@ export function useSushiPairs(
     query?: any,
     swrConfig?: SWRConfiguration | undefined
 ) {
-    // const { chainID } = useWeb3Context();
-    const chainID = 100;
+    const { chainID } = useWeb3Context();
     const shouldFetch = chainID;
     const { data } = useSWR<IExchangePair[]>(
         shouldFetch ? ["sushiPairs", chainID, JSON.stringify(variables)] : null,

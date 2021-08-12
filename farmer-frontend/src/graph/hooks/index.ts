@@ -9,8 +9,8 @@ import {
 import useSWR from "swr";
 
 export function useMiniChefFarms() {
-    //   const { chainID } = useWeb3Context();
-    const chainID = 100;
+    const { chainID } = useWeb3Context();
+
     const shouldFetch =
         chainID &&
         [ChainId.MATIC, ChainId.XDAI, ChainId.HARMONY].includes(chainID);
@@ -26,8 +26,7 @@ export function useMiniChefFarms() {
 }
 
 export function useMiniChefPairAddresses() {
-    //   const { chainID } = useWeb3Context();
-    const chainID = 100;
+      const { chainID } = useWeb3Context();
     const shouldFetch =
         chainID &&
         [ChainId.MATIC, ChainId.XDAI, ChainId.HARMONY].includes(chainID);
