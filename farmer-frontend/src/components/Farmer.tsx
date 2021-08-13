@@ -16,9 +16,6 @@ import Nav from "./Nav";
 import { AddFarmer } from "./AddFarmer";
 import { useWeb3Context } from "../hooks/web3Context";
 import { Farms } from "../views/Farms";
-import { useMiniChefFarms, useMiniChefPairAddresses } from "../graph/hooks";
-import { getMiniChefFarms } from "../graph/fetchers/minichef";
-import { ChainId } from "@sushiswap/sdk";
 import { Settings } from "../views/Settings";
 
 const checkHasVisited = () => {

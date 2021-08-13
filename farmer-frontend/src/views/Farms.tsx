@@ -189,7 +189,9 @@ export const Farms = () => {
                 </ToggleButtonGroup>
             </div>
             <Typography variant="h4">Sushiswap</Typography>
-            <DataContainer data={data} />
+			<div className="data-container">
+				{data.map(x => <DataContainer data={x} />)}
+			</div>
         </Container>
     );
 };

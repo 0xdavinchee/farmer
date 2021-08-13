@@ -1,4 +1,12 @@
-import { Card, CardContent, Container, Typography } from "@material-ui/core";
+import {
+    Button,
+    Card,
+    CardContent,
+    Container,
+    TextField,
+    Typography,
+} from "@material-ui/core";
+import { useState } from "react";
 import { PairType } from "../enum";
 import { IExchangePair } from "../graph/fetchers/exchange";
 import { IMiniChefFarmDataLight } from "../graph/fetchers/minichef";
@@ -42,7 +50,10 @@ export interface IData extends IMiniChefFarmDataLight {
     readonly userCount: string;
 }
 
-export const DataContainer = ({ data }: { data: IData[] }) => {
+export const DataContainer = ({ data }: { data: IData }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [tokenAAmount, setTokenAAmount] = useState("");
+    const [tokenBAmount, setTokenBAmount] = useState("");
     const formatter = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
@@ -52,61 +63,107 @@ export const DataContainer = ({ data }: { data: IData[] }) => {
         // maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
     });
 
+    const rewardA = data.rewards[0].token;
+    const rewardB = data.rewards[1].token;
+
+    const createNewLPAndDeposit = async () => {};
+
     return (
-        <div className="data-container">
-            {data.map((x) => (
-                <Card key={x.id} className="swap-pair">
-                    <CardContent className="swap-pair-content">
-                        <Container>
-                            <Typography variant="body1">Pool</Typography>
-                            <Typography variant="body1">
-                                {
-                                    (x.pair as unknown as IExchangePair).token0
-                                        ?.symbol
-                                }
-                                /
-                                {
-                                    (x.pair as unknown as IExchangePair).token1
-                                        ?.symbol
-                                }
-                            </Typography>
-                            <Typography variant="body1">
-                                TVL: {formatter.format(x.tvl)}
-                            </Typography>
-                        </Container>
-                        <Container>
-                            <Typography variant="body1">Rewards</Typography>
-                            <div>
-                                {x.rewards.map((x) => (
-                                    <div className="reward-container" key={x.token}>
-                                        <img
-                                            className="reward-icon"
-                                            src={x.icon}
-                                        />
-                                        <Typography
-                                            key={x.token}
-                                            variant="body1"
-                                        >
-                                            {x.rewardPerDay.toFixed(2)}{" "}
-                                            {x.token}/day (
-                                            {formatter.format(x.rewardPrice)})
-                                        </Typography>
-                                    </div>
-                                ))}
+        <Card key={data.id} className="swap-pair">
+            <CardContent
+                className="swap-pair-content"
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                <Container>
+                    <Typography variant="body1">Pool</Typography>
+                    <Typography variant="body1">
+                        {(data.pair as unknown as IExchangePair).token0?.symbol}
+                        /
+                        {(data.pair as unknown as IExchangePair).token1?.symbol}
+                    </Typography>
+                    <Typography variant="body1">
+                        TVL: {formatter.format(data.tvl)}
+                    </Typography>
+                </Container>
+                <Container>
+                    <Typography variant="body1">Rewards</Typography>
+                    <div>
+                        {data.rewards.map((x) => (
+                            <div className="reward-container" key={x.token}>
+                                <img className="reward-icon" src={x.icon} />
+                                <Typography key={x.token} variant="body1">
+                                    {x.rewardPerDay.toFixed(2)} {x.token}
+                                    /day ({formatter.format(x.rewardPrice)})
+                                </Typography>
                             </div>
-                        </Container>
-                        <Container>
-                            <Typography variant="body1">APR</Typography>
-                            <Typography variant="body1">
-                                {(x.roiPerMonth * 100).toFixed(2)}% monthly
-                            </Typography>
-                            <Typography variant="body1">
-                                {(x.roiPerYear * 100).toFixed(2)}% annualized
-                            </Typography>
-                        </Container>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
+                        ))}
+                    </div>
+                </Container>
+                <Container>
+                    <Typography variant="body1">APR</Typography>
+                    <Typography variant="body1">
+                        {(data.roiPerMonth * 100).toFixed(2)}% monthly
+                    </Typography>
+                    <Typography variant="body1">
+                        {(data.roiPerYear * 100).toFixed(2)}% annualized
+                    </Typography>
+                </Container>
+            </CardContent>
+
+            {isExpanded && (
+                <>
+                    <Container>
+                        <hr className="farmer-hr" />
+                    </Container>
+                    <Container>
+                        <CardContent>
+                            <div className="farmer-pair-details">
+                                <div>
+                                    <Typography variant="body1">
+                                        LP Balance: {0}
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        Staked Balance: {0}
+                                    </Typography>
+                                </div>
+                                <div className="farmer-pair-rewards">
+                                    <Typography variant="body1">
+                                        Pending {rewardA}: {21}
+                                    </Typography>
+                                    <Typography variant="body1">
+                                        Pending {rewardB}: {21}
+                                    </Typography>
+                                </div>
+
+								<Button variant="outlined">Claim Rewards</Button>
+                            </div>
+                            <div className="farmer-add-lp-deposit">
+                                <TextField
+                                    label={data.pair.token0.symbol + " amount"}
+                                    value={tokenAAmount}
+                                    onChange={(e) =>
+                                        setTokenAAmount(e.target.value)
+                                    }
+                                />
+                                <TextField
+                                    label={data.pair.token1.symbol + " amount"}
+                                    value={tokenBAmount}
+                                    onChange={(e) =>
+                                        setTokenBAmount(e.target.value)
+                                    }
+                                />
+                                <Button variant="outlined">
+                                    Add LP and Deposit
+                                </Button>
+                            </div>
+							<Button variant="outlined">Withdraw LP</Button>
+							<Button variant="outlined">Unstake LP</Button>
+							<Button variant="outlined">Autocompound Position</Button>
+							<Button></Button>
+                        </CardContent>
+                    </Container>
+                </>
+            )}
+        </Card>
     );
 };

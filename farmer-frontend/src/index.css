@@ -98,6 +98,7 @@ code {
   margin-bottom: 1rem;
 }
 .swap-pair-content {
+	cursor: pointer;
   display: flex;
 }
 
@@ -111,4 +112,16 @@ code {
 .settings-button {
   display: flex;
   justify-content: flex-start;
+}
+.farmer-hr {
+	opacity: 0.1;
+}
+.farmer-pair-details {
+	display: flex;
+}
+.farmer-pair-rewards {
+	margin: 0 1.5rem;
+}
+.farmer-add-lp-deposit {
+	margin-top: 1rem;
 }
