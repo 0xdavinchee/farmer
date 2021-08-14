@@ -88,7 +88,6 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
     useEffect(() => {
         if (!(window as any).ethereum) return;
         (window as any).ethereum.on("connect", (connectInfo: any) => {
-            console.log("hello");
             setChainID(parseInt(connectInfo.chainId));
         });
 
@@ -141,7 +140,6 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
     }, [web3Modal]);
 
     const disconnect = useCallback(async () => {
-        console.log("disconnecting");
         web3Modal.clearCachedProvider();
         setConnected(false);
 

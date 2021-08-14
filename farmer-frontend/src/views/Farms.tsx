@@ -172,7 +172,7 @@ export const Farms = () => {
             return swapPairs.find((pair) => pair.id === farm.pair);
         })
         .map(map);
-    console.log("data", data);
+
     return (
         <Container maxWidth="md" className="farms-container">
             <div className="toggle-pools">

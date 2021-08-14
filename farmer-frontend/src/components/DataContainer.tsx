@@ -6,7 +6,7 @@ import {
     TextField,
     Typography,
 } from "@material-ui/core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PairType } from "../enum";
 import { IExchangePair } from "../graph/fetchers/exchange";
 import { IMiniChefFarmDataLight } from "../graph/fetchers/minichef";
@@ -52,6 +52,7 @@ export interface IData extends IMiniChefFarmDataLight {
 
 export const DataContainer = ({ data }: { data: IData }) => {
     const [isExpanded, setIsExpanded] = useState(false);
+    const [moreOptions, setMoreOptions] = useState(false);
     const [tokenAAmount, setTokenAAmount] = useState("");
     const [tokenBAmount, setTokenBAmount] = useState("");
     const formatter = new Intl.NumberFormat("en-US", {
@@ -67,6 +68,10 @@ export const DataContainer = ({ data }: { data: IData }) => {
     const rewardB = data.rewards[1].token;
 
     const createNewLPAndDeposit = async () => {};
+
+    useEffect(() => {
+        if (!isExpanded) return;
+    }, [isExpanded]);
 
     return (
         <Card key={data.id} className="swap-pair">
@@ -135,11 +140,14 @@ export const DataContainer = ({ data }: { data: IData }) => {
                                     </Typography>
                                 </div>
 
-								<Button variant="outlined">Claim Rewards</Button>
+                                <Button variant="outlined">
+                                    Claim Rewards
+                                </Button>
                             </div>
                             <div className="farmer-add-lp-deposit">
                                 <TextField
                                     label={data.pair.token0.symbol + " amount"}
+                                    className="add-lp-amount-input"
                                     value={tokenAAmount}
                                     onChange={(e) =>
                                         setTokenAAmount(e.target.value)
@@ -147,6 +155,7 @@ export const DataContainer = ({ data }: { data: IData }) => {
                                 />
                                 <TextField
                                     label={data.pair.token1.symbol + " amount"}
+                                    className="add-lp-amount-input"
                                     value={tokenBAmount}
                                     onChange={(e) =>
                                         setTokenBAmount(e.target.value)
@@ -156,10 +165,36 @@ export const DataContainer = ({ data }: { data: IData }) => {
                                     Add LP and Deposit
                                 </Button>
                             </div>
-							<Button variant="outlined">Withdraw LP</Button>
-							<Button variant="outlined">Unstake LP</Button>
-							<Button variant="outlined">Autocompound Position</Button>
-							<Button></Button>
+                            <Typography
+                                className="more-options"
+                                variant="body1"
+                                color="primary"
+                                onClick={() => setMoreOptions(!moreOptions)}
+                            >
+                                {(moreOptions ? "Less" : "More") + " Options"}
+                            </Typography>
+                            {moreOptions && (
+                                <div className="more-options-buttons">
+                                    <Button
+                                        className="more-option-button"
+                                        variant="outlined"
+                                    >
+                                        Withdraw LP
+                                    </Button>
+                                    <Button
+                                        className="more-option-button"
+                                        variant="outlined"
+                                    >
+                                        Unstake LP
+                                    </Button>
+                                    <Button
+                                        className="more-option-button"
+                                        variant="outlined"
+                                    >
+                                        Autocompound Position
+                                    </Button>
+                                </div>
+                            )}
                         </CardContent>
                     </Container>
                 </>

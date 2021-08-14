@@ -118,10 +118,26 @@ code {
 }
 .farmer-pair-details {
 	display: flex;
+  align-items: center;
 }
 .farmer-pair-rewards {
 	margin: 0 1.5rem;
 }
 .farmer-add-lp-deposit {
-	margin-top: 1rem;
+	margin: 1rem 0;
+  display: flex;
+  align-items: center;
+}
+.add-lp-amount-input {
+  margin-right: 1rem !important;
+}
+.more-options {
+  cursor: pointer;
+}
+.more-options-buttons {
+  display: flex;
+  margin-top: 1rem;
+}
+.more-option-button {
+  margin-right: 2rem !important;
 }
