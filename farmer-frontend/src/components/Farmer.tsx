@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { SushiFarmer } from "../typechain";
 import { ContractType, PATH, Storage } from "../utils/constants";
-import { initializeContract } from "../utils/helpers";
+import { getContract } from "../utils/helpers";
 import { IExistingContracts } from "../utils/interface";
 import {
     BrowserRouter,
@@ -85,8 +85,8 @@ const Router = () => {
             return;
         }
         try {
-            const farmerContract = await initializeContract(
-                farmerAddress,
+            const farmerContract = getContract(
+                chainID,
                 ContractType.SushiFarmer
             );
             if (farmerContract) {

@@ -10,6 +10,9 @@ import { useEffect, useState } from "react";
 import { PairType } from "../enum";
 import { IExchangePair } from "../graph/fetchers/exchange";
 import { IMiniChefFarmDataLight } from "../graph/fetchers/minichef";
+import { useWeb3Context } from "../hooks/web3Context";
+import { ContractType } from "../utils/constants";
+import { getContract } from "../utils/helpers";
 
 interface IRewardsData {
     readonly token: string;
@@ -55,6 +58,7 @@ export const DataContainer = ({ data }: { data: IData }) => {
     const [moreOptions, setMoreOptions] = useState(false);
     const [tokenAAmount, setTokenAAmount] = useState("");
     const [tokenBAmount, setTokenBAmount] = useState("");
+    const [lpAmount, setLpAmount] = useState("");
     const formatter = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "USD",
@@ -64,11 +68,73 @@ export const DataContainer = ({ data }: { data: IData }) => {
         // maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
     });
 
+    const { chainID } = useWeb3Context();
+    const sushiFarmer = getContract(chainID, ContractType.SushiFarmer);
+
     const rewardA = data.rewards[0].token;
     const rewardB = data.rewards[1].token;
 
-    const createNewLPAndDeposit = async () => {};
+    const autocompoundPosition = async () => {
+        if (!sushiFarmer) return;
 
+        try {
+            await sushiFarmer.autoCompoundExistingLPPosition(
+                data.miniChef.id,
+                data.pair.id,
+                []
+            );
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const createNewLPAndDeposit = async () => {
+        if (!sushiFarmer) return;
+
+        try {
+            await sushiFarmer.createNewLPAndDeposit({
+                pid: data.miniChef.id,
+                amountADesired: tokenAAmount,
+                amountBDesired: tokenBAmount,
+                pair: data.pair.id,
+                tokenA: data.pair.token0.id,
+                tokenB: data.pair.token1.id,
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const claimRewards = async () => {
+        if (!sushiFarmer) return;
+        try {
+            await sushiFarmer.claimRewards(data.miniChef.id);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const unstakeLP = async () => {
+        if (!sushiFarmer) return;
+        try {
+            await sushiFarmer.withdrawLP(data.miniChef.id, lpAmount);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const withdrawLP = async () => {
+        if (!sushiFarmer) return;
+        try {
+            await sushiFarmer.withdrawFunds(data.pair.id, lpAmount);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // load LP balance
+    // load staked balance
+    // load pending rewards
     useEffect(() => {
         if (!isExpanded) return;
     }, [isExpanded]);
@@ -140,7 +206,10 @@ export const DataContainer = ({ data }: { data: IData }) => {
                                     </Typography>
                                 </div>
 
-                                <Button variant="outlined">
+                                <Button
+                                    variant="outlined"
+                                    onClick={claimRewards}
+                                >
                                     Claim Rewards
                                 </Button>
                             </div>
@@ -161,7 +230,10 @@ export const DataContainer = ({ data }: { data: IData }) => {
                                         setTokenBAmount(e.target.value)
                                     }
                                 />
-                                <Button variant="outlined">
+                                <Button
+                                    variant="outlined"
+                                    onClick={createNewLPAndDeposit}
+                                >
                                     Add LP and Deposit
                                 </Button>
                             </div>
@@ -175,21 +247,31 @@ export const DataContainer = ({ data }: { data: IData }) => {
                             </Typography>
                             {moreOptions && (
                                 <div className="more-options-buttons">
+                                    <TextField
+                                        label={"LP amount"}
+                                        value={lpAmount}
+                                        onChange={(e) =>
+                                            setLpAmount(e.target.value)
+                                        }
+                                    />
                                     <Button
                                         className="more-option-button"
                                         variant="outlined"
+                                        onClick={withdrawLP}
                                     >
                                         Withdraw LP
                                     </Button>
                                     <Button
                                         className="more-option-button"
                                         variant="outlined"
+                                        onClick={unstakeLP}
                                     >
                                         Unstake LP
                                     </Button>
                                     <Button
                                         className="more-option-button"
                                         variant="outlined"
+                                        onClick={autocompoundPosition}
                                     >
                                         Autocompound Position
                                     </Button>
