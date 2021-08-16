@@ -14,7 +14,7 @@ export const requestAccount = async () => {
     return await ethereum.request({ method: "eth_requestAccounts" });
 };
 
-export const getContractAddress = (chainId: number) => {
+export const getContractAddresses = () => {
     const stringExistingContracts = localStorage.getItem(
         Storage.ContractAddresses
     );
@@ -22,7 +22,14 @@ export const getContractAddress = (chainId: number) => {
         const parsedContracts: IExistingContracts = JSON.parse(
             stringExistingContracts
         );
-        return parsedContracts[chainId];
+        return parsedContracts;
+    }
+};
+
+export const getContractAddress = (chainId: number) => {
+    const existingContracts = getContractAddresses();
+    if (existingContracts) {
+        return existingContracts[chainId];
     }
 };
 

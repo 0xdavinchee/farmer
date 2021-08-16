@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import { useEffect, useState } from "react";
 import { SushiFarmer } from "../typechain";
 import { ContractType, PATH, Storage } from "../utils/constants";
-import { getContract } from "../utils/helpers";
+import { getContract, getContractAddresses } from "../utils/helpers";
 import { IExistingContracts } from "../utils/interface";
 import {
     BrowserRouter,
@@ -46,14 +46,9 @@ const Router = () => {
     // and get all contracts created by the user (v2)
     useEffect(() => {
         try {
-            const stringExistingContracts = localStorage.getItem(
-                Storage.ContractAddresses
-            );
-            if (stringExistingContracts) {
-                const parsedContracts: IExistingContracts = JSON.parse(
-                    stringExistingContracts
-                );
-                setExistingContracts(parsedContracts);
+            const existingContracts = getContractAddresses();
+            if (existingContracts) {
+                setExistingContracts(existingContracts);
             }
         } catch (err) {
             console.error(err);
@@ -116,12 +111,6 @@ const Router = () => {
         console.log(owner);
     };
 
-	const handleSave = async () => {
-		// if (farmerAddress !== localstorageFarmerAddress) {
-		// 	await addExistingFarmer(farmerAddress);
-		// }
-	}
-
     return (
         <Switch>
             <Route path={PATH.Landing} exact>
@@ -135,12 +124,7 @@ const Router = () => {
                 <Farms />
             </Route>
             <Route path={PATH.Settings} exact>
-                <Settings
-					farmer={farmer}
-                    farmerAddress={farmerAddress}
-                    setFarmerAddress={(x) => setFarmerAddress(x)}
-					save={() => handleSave()}
-                />
+                <Settings />
             </Route>
         </Switch>
     );

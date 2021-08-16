@@ -1,32 +1,42 @@
 import { Button, Container, TextField, Typography } from "@material-ui/core";
 import { useState } from "react";
+import { useWeb3Context } from "../hooks/web3Context";
 import { SushiFarmer } from "../typechain";
+import { ContractType, Storage } from "../utils/constants";
+import { getContract, getContractAddresses } from "../utils/helpers";
 
-interface ISettingsProps {
-    readonly farmer: SushiFarmer | undefined;
-    readonly farmerAddress: string;
-    readonly setFarmerAddress: (x: string) => void;
-    readonly save: () => Promise<void>;
-}
-
-export const Settings = ({
-    farmer,
-    farmerAddress,
-    setFarmerAddress,
-    save,
-}: ISettingsProps) => {
+export const Settings = () => {
     const [rewardASavingsRate, setRewardASavingsRate] = useState("");
     const [rewardBSavingsRate, setRewardBSavingsRate] = useState("");
+    const { chainID } = useWeb3Context();
+    const sushiFarmer = getContract(chainID, ContractType.SushiFarmer);
+    const [farmerAddress, setFarmerAddress] = useState(
+        sushiFarmer ? sushiFarmer.address : ""
+    );
 
     const handleSave = async () => {
-        await save();
-        if (farmer) {
-            await farmer.setRewardSavings(
+        if (!sushiFarmer) return;
+        const existingContracts = getContractAddresses();
+        if (existingContracts) {
+            const storageContracts = {
+                ...existingContracts,
+                [chainID]: farmerAddress,
+            };
+            localStorage.setItem(
+                Storage.ContractAddresses,
+                JSON.stringify(storageContracts)
+            );
+        }
+        try {
+            await sushiFarmer.setRewardSavings(
                 rewardASavingsRate,
                 rewardBSavingsRate
             );
+        } catch (err) {
+            console.error(err);
         }
     };
+
     return (
         <Container maxWidth="md" className="farms-container settings">
             <Typography variant="h3">Settings</Typography>
