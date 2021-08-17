@@ -1,7 +1,5 @@
 import { Container } from "@material-ui/core";
-import { ethers } from "ethers";
 import { useEffect, useState } from "react";
-import { SushiFarmer } from "../typechain";
 import { ContractType, PATH, Storage } from "../utils/constants";
 import { getContract, getContractAddresses } from "../utils/helpers";
 import { IExistingContracts } from "../utils/interface";
@@ -29,7 +27,6 @@ const checkHasVisited = () => {
 const Router = () => {
     const [existingContracts, setExistingContracts] =
         useState<IExistingContracts | null>(null);
-    const [farmer, setFarmer] = useState<SushiFarmer | undefined>();
     const [farmerAddress, setFarmerAddress] = useState("");
     const [owner, setOwner] = useState("");
     const [existingLpPositions, setExistingLpPositions] = useState<
@@ -59,7 +56,6 @@ const Router = () => {
     useEffect(() => {
         if (chainID == null || existingContracts == null) return;
         setFarmerAddress(existingContracts[chainID]);
-        addExistingFarmer(existingContracts[chainID]);
     }, [chainID, existingContracts]);
 
     useEffect(() => {
@@ -73,51 +69,10 @@ const Router = () => {
         }
     }, [history, location.pathname]);
 
-    const addExistingFarmer = async (farmerAddress: string) => {
-        if (!farmerAddress || !farmerAddress.trim() || !chainID) return;
-        const isAddress = ethers.utils.isAddress(farmerAddress);
-        if (!isAddress) {
-            return;
-        }
-        try {
-            const farmerContract = getContract(
-                chainID,
-                ContractType.SushiFarmer
-            );
-            if (farmerContract) {
-                const owner = await farmerContract.owner();
-                setOwner(owner);
-            }
-            setFarmer(farmerContract);
-            const storageContracts = {
-                ...existingContracts,
-                [chainID]: farmerAddress,
-            };
-            const stringifiedContracts = JSON.stringify(storageContracts);
-            localStorage.setItem(
-                Storage.ContractAddresses,
-                stringifiedContracts
-            );
-            localStorage.setItem(Storage.HasVisited, "true");
-            history.push(PATH.Home);
-        } catch (err) {
-            console.error(err);
-        }
-    };
-
-    const testStuff = async () => {
-        if (!farmer) return;
-        const owner = await farmer.owner();
-        console.log(owner);
-    };
-
     return (
         <Switch>
             <Route path={PATH.Landing} exact>
                 <AddFarmer
-                    farmerAddress={farmerAddress}
-                    createFarmer={() => addExistingFarmer(farmerAddress)}
-                    setFarmerAddress={(x) => setFarmerAddress(x)}
                 />
             </Route>
             <Route path={PATH.Home} exact>
