@@ -161,7 +161,7 @@ export const DataContainer = ({ data }: { data: IData }) => {
                     <div>
                         {data.rewards.map((x) => (
                             <div className="reward-container" key={x.token}>
-                                <img className="reward-icon" src={x.icon} />
+                                <img className="reward-icon" src={x.icon} alt="reward-icon" />
                                 <Typography key={x.token} variant="body1">
                                     {x.rewardPerDay.toFixed(2)} {x.token}
                                     /day ({formatter.format(x.rewardPrice)})

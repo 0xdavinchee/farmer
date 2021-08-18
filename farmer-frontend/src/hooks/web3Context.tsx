@@ -42,7 +42,7 @@ export const useWeb3Context = () => {
     const { onChainProvider } = web3Context;
     return useMemo(() => {
         return { ...onChainProvider };
-    }, [web3Context]);
+    }, [onChainProvider]);
 };
 
 export const useAddress = () => {
@@ -64,26 +64,27 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
         new StaticJsonRpcProvider(providerUrl)
     );
 
-    const [web3Modal, setWeb3Modal] = useState<Web3Modal>(
-        new Web3Modal({
-            // network: "mainnet", // optional
-            cacheProvider: true, // optional
-            providerOptions: {
-                walletconnect: {
-                    package: WalletConnectProvider, // required
-                    options: {
-                        infuraId: process.env.REACT_APP_INFURA_API_KEY,
+    const web3Modal = useMemo(
+        () =>
+            new Web3Modal({
+                // network: "mainnet", // optional
+                cacheProvider: true, // optional
+                providerOptions: {
+                    walletconnect: {
+                        package: WalletConnectProvider, // required
+                        options: {
+                            infuraId: process.env.REACT_APP_INFURA_API_KEY,
+                        },
                     },
                 },
-            },
-        })
+            }),
+        []
     );
-
-    const _hasCachedProvider = (): Boolean => {
+    const _hasCachedProvider = useCallback(() => {
         if (!web3Modal) return false;
         if (!web3Modal.cachedProvider) return false;
         return true;
-    };
+    }, [web3Modal]);
 
     useEffect(() => {
         if (!(window as any).ethereum) return;
@@ -146,7 +147,7 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
         setTimeout(() => {
             window.location.reload();
         }, 1);
-    }, [provider, web3Modal, connected]);
+    }, [web3Modal]);
 
     const onChainProvider = useMemo(
         () => ({
@@ -165,7 +166,7 @@ export const Web3ContextProvider: React.FC<{ children: ReactElement }> = ({
         if (_hasCachedProvider()) {
             connect();
         }
-    }, []);
+    }, [_hasCachedProvider, connect]);
 
     return (
         <Web3Context.Provider value={{ onChainProvider }}>

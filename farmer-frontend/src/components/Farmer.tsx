@@ -1,8 +1,6 @@
 import { Container } from "@material-ui/core";
-import { useEffect, useState } from "react";
-import { ContractType, PATH, Storage } from "../utils/constants";
-import { getContract, getContractAddresses } from "../utils/helpers";
-import { IExistingContracts } from "../utils/interface";
+import { useEffect } from "react";
+import { PATH, Storage } from "../utils/constants";
 import {
     BrowserRouter,
     Route,
@@ -12,7 +10,6 @@ import {
 } from "react-router-dom";
 import Nav from "./Nav";
 import { AddFarmer } from "./AddFarmer";
-import { useWeb3Context } from "../hooks/web3Context";
 import { Farms } from "../views/Farms";
 import { Settings } from "../views/Settings";
 
@@ -25,38 +22,8 @@ const checkHasVisited = () => {
 };
 
 const Router = () => {
-    const [existingContracts, setExistingContracts] =
-        useState<IExistingContracts | null>(null);
-    const [farmerAddress, setFarmerAddress] = useState("");
-    const [owner, setOwner] = useState("");
-    const [existingLpPositions, setExistingLpPositions] = useState<
-        IExistingLPPosition[]
-    >([]);
     const history = useHistory();
     const location = useLocation();
-
-    const { user, chainID } = useWeb3Context();
-
-    const isUserOwnerOfContract = owner === user && user !== "";
-
-    // we can store the contract addresses in localStorage, but we can also query events
-    // and get all contracts created by the user (v2)
-    useEffect(() => {
-        try {
-            const existingContracts = getContractAddresses();
-            if (existingContracts) {
-                setExistingContracts(existingContracts);
-            }
-        } catch (err) {
-            console.error(err);
-        }
-    }, []);
-
-    /** Add existing farmer address if there is one saved in localStorage. */
-    useEffect(() => {
-        if (chainID == null || existingContracts == null) return;
-        setFarmerAddress(existingContracts[chainID]);
-    }, [chainID, existingContracts]);
 
     useEffect(() => {
         if (location.pathname !== PATH.Landing) return;
@@ -72,8 +39,7 @@ const Router = () => {
     return (
         <Switch>
             <Route path={PATH.Landing} exact>
-                <AddFarmer
-                />
+                <AddFarmer />
             </Route>
             <Route path={PATH.Home} exact>
                 <Farms />
@@ -84,13 +50,6 @@ const Router = () => {
         </Switch>
     );
 };
-
-interface IExistingLPPosition {
-    readonly independentToken: string;
-    readonly dependentToken: string;
-    readonly pair: string;
-    readonly pid: string;
-}
 
 export const Farmer = () => {
     return (

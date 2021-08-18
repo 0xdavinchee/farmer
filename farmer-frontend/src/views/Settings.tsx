@@ -1,7 +1,6 @@
 import { Button, Container, TextField, Typography } from "@material-ui/core";
 import { useState } from "react";
 import { useWeb3Context } from "../hooks/web3Context";
-import { SushiFarmer } from "../typechain";
 import { ContractType, Storage } from "../utils/constants";
 import { getContract, getContractAddresses } from "../utils/helpers";
 

@@ -5,7 +5,6 @@ import {
   useMediaQuery,
 } from "@material-ui/core";
 import { useMemo } from "react";
-import { Web3ContextProvider } from "../hooks/web3Context";
 import { Farmer } from "./Farmer";
 
 function App() {
